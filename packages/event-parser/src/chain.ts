@@ -4,6 +4,12 @@ import type { RawTelegramMessage } from "./types.js";
 
 const EVENT_SIGNAL = /(?:📅|🗓|⏰|📍|\b(?:date|time|venue|location|rsvp|register|sign\s*up)\b|https?:\/\/)/i;
 const ABSOLUTE_DATE_SIGNAL = /(?:📅|🗓|\bdate\s*[:\-]|\b\d{1,2}(?:st|nd|rd|th)?\s+(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)|\b(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\s+\d{1,2})/i;
+const DETAIL_LINE = /^(?:[📅🗓⏰📍]|date|time|when|venue|location|where|rsvp|register|sign\s*up|directions?|https?:\/\/)/i;
+
+function hasStandaloneTitle(text: string): boolean {
+  const first = text.split("\n").map((line) => line.trim()).find(Boolean);
+  return Boolean(first && first.length >= 3 && first.length <= 120 && !DETAIL_LINE.test(first));
+}
 
 export function assembleMessageChain(
   messages: RawTelegramMessage[],
@@ -39,11 +45,11 @@ export function assembleMessageChain(
   const seedTime = Date.parse(seed.sentAt);
   for (const message of sameChat) {
     const distance = Math.abs(Date.parse(message.sentAt) - seedTime);
-    const competingCompletePosts =
+    const competingAnnouncements =
       message.telegramMessageId !== seed.telegramMessageId &&
-      ABSOLUTE_DATE_SIGNAL.test(seed.text) &&
-      ABSOLUTE_DATE_SIGNAL.test(message.text);
-    if (distance <= proximityMinutes * 60_000 && EVENT_SIGNAL.test(message.text) && !competingCompletePosts) {
+      ((ABSOLUTE_DATE_SIGNAL.test(seed.text) && ABSOLUTE_DATE_SIGNAL.test(message.text)) ||
+        (hasStandaloneTitle(seed.text) && hasStandaloneTitle(message.text)));
+    if (distance <= proximityMinutes * 60_000 && EVENT_SIGNAL.test(message.text) && !competingAnnouncements) {
       included.add(message.telegramMessageId);
     }
   }

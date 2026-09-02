@@ -138,3 +138,50 @@ test("chain proximity does not merge adjacent complete event announcements", () 
   const chain = assembleMessageChain(messages, "1");
   assert.deepEqual(chain.map((item) => item.telegramMessageId), ["1"]);
 });
+
+test("an undated announcement does not merge with a nearby different event", () => {
+  const messages: RawTelegramMessage[] = [
+    {
+      telegramChatId: "events",
+      telegramMessageId: "undated",
+      sentAt: "2026-09-01T10:00:00Z",
+      text: "Event A\nRegister: https://example.com/a",
+    },
+    {
+      telegramChatId: "events",
+      telegramMessageId: "dated",
+      sentAt: "2026-09-01T10:10:00Z",
+      text: "Event B\nDate: 3 September\nTime: 6pm",
+    },
+  ];
+
+  assert.deepEqual(
+    assembleMessageChain(messages, "undated").map((item) => item.telegramMessageId),
+    ["undated"],
+  );
+});
+
+test("date spans are not parsed as clock-time ranges", () => {
+  const candidate = extractDeterministicEvent([normalizeTelegramMessage({
+    telegramChatId: "events",
+    telegramMessageId: "conference",
+    sentAt: "2026-09-01T10:00:00Z",
+    text: "Conference\n12-13 October 2026",
+  })], { defaultTimezone: "Asia/Singapore" });
+
+  assert.equal(candidate.allDay, true);
+  assert.equal(candidate.startAt, null);
+  assert.equal(candidate.endAt, null);
+});
+
+test("nonexistent DST wall-clock times remain unconfirmed", () => {
+  const candidate = extractDeterministicEvent([normalizeTelegramMessage({
+    telegramChatId: "events",
+    telegramMessageId: "dst-gap",
+    sentAt: "2026-03-01T10:00:00Z",
+    text: "Early meetup\nDate: March 8, 2026\nTime: 2:30am",
+  })], { defaultTimezone: "America/New_York" });
+
+  assert.equal(candidate.status, "unconfirmed");
+  assert.equal(candidate.startAt, null);
+});

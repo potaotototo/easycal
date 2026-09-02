@@ -50,6 +50,7 @@ export function validateStructuredCandidate(
 
   if (!eventDate || !isValidDateOnly(eventDate) || !title || !referencesAreValid) return null;
   if (!validInstant(startAt) || !validInstant(endAt)) return null;
+  if (timezone && !isValidTimeZone(timezone)) return null;
   if (allDay && (startAt || endAt)) return null;
   if (!allDay && !validTimedRange(eventDate, startAt, endAt, timezone)) return null;
 

@@ -68,6 +68,9 @@ function clock(hourText: string, minuteText: string | undefined, meridiem: strin
 function extractTimes(text: string): { start: ParsedTime; end: ParsedTime | null } | null {
   const range = text.match(/\b(\d{1,2})(?::(\d{2}))?\s*(am|pm)?\s*(?:-|–|—|to)\s*(\d{1,2})(?::(\d{2}))?\s*(am|pm)?\b/i);
   if (range) {
+    const preceding = text.slice(Math.max(0, range.index! - 12), range.index);
+    const hasTimeSyntax = Boolean(range[2] || range[3] || range[5] || range[6]) || /(?:\btime\s*[:\-]?|\bat)\s*$/i.test(preceding);
+    if (!hasTimeSyntax) return null;
     const sharedMeridiem = range[3] ?? range[6];
     const start = clock(range[1]!, range[2], sharedMeridiem);
     const end = clock(range[4]!, range[5], range[6] ?? range[3]);
@@ -135,7 +138,6 @@ export function extractDeterministicEvent(
   const rsvpUrl = extractRsvp(evidence);
   const directionsChannel = combined.match(/directions?(?:\s+channel)?\s*[:\-]\s*(@[a-z0-9_]+)/i)?.[1] ?? null;
   const timezoneIsUsable = !parsedTimes || Boolean(timezone);
-  const confirmed = Boolean(eventDate && title && timezoneIsUsable);
   const allDay = Boolean(eventDate && !parsedTimes);
   const startAt = eventDate && parsedTimes && timezone
     ? zonedDateTimeToInstant(eventDate, parsedTimes.start.hour, parsedTimes.start.minute, timezone)
@@ -146,6 +148,8 @@ export function extractDeterministicEvent(
   const endAt = endDate && parsedTimes?.end && timezone
     ? zonedDateTimeToInstant(endDate, parsedTimes.end.hour, parsedTimes.end.minute, timezone)
     : null;
+  const instantsAreUsable = !parsedTimes || Boolean(startAt && (!parsedTimes.end || endAt));
+  const confirmed = Boolean(eventDate && title && timezoneIsUsable && instantsAreUsable);
   const signals = [eventDate, title, parsedTimes, locationName, rsvpUrl].filter(Boolean).length;
   const reviewReasons: string[] = [];
   if (!eventDate) reviewReasons.push("No trusted absolute event date was found");
@@ -153,6 +157,7 @@ export function extractDeterministicEvent(
   if (eventDate && !parsedTimes) reviewReasons.push("No time was found; treating this as an all-day event");
   if (!rsvpUrl) reviewReasons.push("No RSVP URL was found");
   if (!timezoneIsUsable) reviewReasons.push("The configured timezone is not a valid IANA timezone");
+  if (parsedTimes && !instantsAreUsable) reviewReasons.push("The local time does not resolve to a valid chronological instant");
 
   return {
     id: `telegram:${evidence[0]!.telegramChatId}:${evidence[0]!.telegramMessageId}`,
