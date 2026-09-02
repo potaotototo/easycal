@@ -1,0 +1,16 @@
+[
+  {
+    "telegramChatId": "-1001234567890",
+    "telegramMessageId": "420",
+    "sentAt": "2026-09-01T03:00:00Z",
+    "text": "NOC sharing\n📅 2 Sep\n⏰ 4:00pm – 6:00pm\n📍 NUS Enterprise I3 MPH, Level 2\n21 Heng Mui Keng Terrace, Singapore 119613\nRSVP here\nDirections: @nusstartit",
+    "entities": [
+      {
+        "type": "text_link",
+        "offset": 116,
+        "length": 9,
+        "url": "https://forms.cloud.microsoft/r/0YVwa8YMEy"
+      }
+    ]
+  }
+]
