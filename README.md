@@ -1,5 +1,7 @@
 # EasyCal
 
+Ever muted Telegram channels because there is too much spam, then realised you missed an event or job posting? EasyCal takes away the chore of reading every message and surfaces the opportunities that matter.
+
 An event-calendar service that lets a person authorize their Telegram account, choose a dynamic chat folder, extract events from recent English messages, and view or share an immutable calendar snapshot.
 
 ## Repository layout
