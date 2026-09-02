@@ -1,0 +1,14 @@
+{
+  "status": "confirmed",
+  "confidence": "high",
+  "title": "NOC sharing",
+  "eventDate": "YEAR-09-02",
+  "startAt": "YEAR-09-02T16:00:00+08:00",
+  "endAt": "YEAR-09-02T18:00:00+08:00",
+  "timezone": "Asia/Singapore",
+  "allDay": false,
+  "locationName": "NUS Enterprise I3 MPH, Level 2",
+  "address": "21 Heng Mui Keng Terrace, Singapore 119613",
+  "rsvpUrl": "https://forms.cloud.microsoft/r/0YVwa8YMEy",
+  "directionsChannel": "@nusstartit"
+}
