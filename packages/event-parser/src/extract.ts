@@ -174,6 +174,7 @@ export function extractDeterministicEvent(
     address,
     rsvpUrl,
     directionsChannel,
+    categories: ["other"],
     evidence,
     reviewReasons,
   };

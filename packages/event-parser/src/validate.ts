@@ -72,6 +72,7 @@ export function validateStructuredCandidate(
     address: nullableString(value.address),
     rsvpUrl,
     directionsChannel: nullableString(value.directionsChannel),
+    categories: ["other"],
     evidence,
     reviewReasons: Array.isArray(value.reviewReasons)
       ? value.reviewReasons.filter((item): item is string => typeof item === "string")
@@ -109,5 +110,6 @@ export function candidateToCalendarEvent(candidate: EventCandidate): CalendarEve
     address: candidate.address,
     rsvpUrl: candidate.rsvpUrl,
     sourceLabel: null,
+    categories: candidate.categories,
   };
 }

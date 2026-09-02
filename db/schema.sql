@@ -11,6 +11,19 @@ create table users (
   device_timezone text not null default 'UTC'
 );
 
+create table user_preferences (
+  user_id uuid primary key references users(id) on delete cascade,
+  interest_categories text[] not null check (
+    cardinality(interest_categories) > 0 and interest_categories <@ array[
+      'career', 'internships', 'technology', 'entrepreneurship', 'education',
+      'networking', 'community', 'volunteering', 'sports_wellness',
+      'arts_culture', 'social', 'other'
+    ]::text[]
+  ),
+  location_terms text[] not null default '{}'::text[],
+  updated_at timestamptz not null default now()
+);
+
 create table user_sessions (
   id uuid primary key,
   user_id uuid not null references users(id) on delete cascade,
@@ -118,6 +131,13 @@ create table calendar_events (
   rsvp_url text,
   directions_channel text,
   source_label text,
+  categories text[] not null default array['other']::text[] check (
+    cardinality(categories) > 0 and categories <@ array[
+      'career', 'internships', 'technology', 'entrepreneurship', 'education',
+      'networking', 'community', 'volunteering', 'sports_wellness',
+      'arts_culture', 'social', 'other'
+    ]::text[]
+  ),
   created_at timestamptz not null default now(),
   check ((all_day and start_at is null and end_at is null) or (not all_day and start_at is not null))
 );

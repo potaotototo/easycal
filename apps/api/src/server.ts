@@ -7,6 +7,7 @@ import { registerAuthRoutes } from "./routes/auth.js";
 import { registerEventRoutes } from "./routes/events.js";
 import { registerFolderRoutes } from "./routes/folders.js";
 import { registerSnapshotRoutes } from "./routes/snapshots.js";
+import { registerPreferenceRoutes } from "./routes/preferences.js";
 
 export async function buildServer(env: Env, context?: AppContext): Promise<FastifyInstance> {
   const app = Fastify({
@@ -44,6 +45,7 @@ export async function buildServer(env: Env, context?: AppContext): Promise<Fasti
   registerFolderRoutes(app, appContext);
   registerEventRoutes(app, appContext);
   registerSnapshotRoutes(app, appContext);
+  registerPreferenceRoutes(app, appContext);
 
   return app;
 }

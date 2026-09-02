@@ -69,6 +69,7 @@ beforeAll(async () => {
     rsvpUrl: "https://forms.cloud.microsoft/r/0YVwa8YMEy",
     directionsChannel: "@nusstartit",
     sourceLabel: "NUS Start IT",
+    categories: ["entrepreneurship", "community"],
   });
 
   // The API cannot decrypt a session to ask Telegram, so folders come from cache.
@@ -251,6 +252,52 @@ describe("GET /v1/events", () => {
       headers: auth(sessionToken),
     });
     expect(response.statusCode).toBe(400);
+  });
+});
+
+describe("/v1/preferences", () => {
+  it("returns defaults and saves normalized preferences", async () => {
+    const defaults = await app.inject({
+      method: "GET",
+      url: "/v1/preferences",
+      headers: auth(sessionToken),
+    });
+    expect(defaults.statusCode).toBe(200);
+    expect(defaults.json().interestCategories).toContain("entrepreneurship");
+
+    const saved = await app.inject({
+      method: "PUT",
+      url: "/v1/preferences",
+      headers: auth(sessionToken),
+      payload: { interestCategories: ["entrepreneurship"], locationTerms: [" NUS ", "nus"] },
+    });
+    expect(saved.statusCode).toBe(200);
+    expect(saved.json()).toEqual({
+      interestCategories: ["entrepreneurship"],
+      locationTerms: ["NUS"],
+    });
+
+    await app.inject({
+      method: "PUT",
+      url: "/v1/preferences",
+      headers: auth(sessionToken),
+      payload: {
+        interestCategories: ["career", "internships", "technology", "entrepreneurship", "networking", "community"],
+        locationTerms: [],
+      },
+    });
+  });
+
+  it("rejects empty or unknown interests", async () => {
+    for (const interestCategories of [[], ["made_up"]]) {
+      const response = await app.inject({
+        method: "PUT",
+        url: "/v1/preferences",
+        headers: auth(sessionToken),
+        payload: { interestCategories, locationTerms: [] },
+      });
+      expect(response.statusCode).toBe(400);
+    }
   });
 });
 

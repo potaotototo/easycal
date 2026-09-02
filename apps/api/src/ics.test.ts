@@ -17,6 +17,7 @@ const timed: CalendarEvent = {
   address: "21 Heng Mui Keng Terrace, Singapore 119613",
   rsvpUrl: "https://forms.cloud.microsoft/r/0YVwa8YMEy",
   sourceLabel: "NUS Start IT",
+  categories: ["entrepreneurship"],
 };
 
 const allDay: CalendarEvent = {

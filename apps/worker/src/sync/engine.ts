@@ -16,6 +16,7 @@ import {
 } from "@easycal/db";
 import { assembleChains } from "../parser/chains.js";
 import type { EventParser } from "../parser/contract.js";
+import type { EventCategoryClassifier } from "../classification/classifier.js";
 import {
   FloodWaitError,
   ReauthRequiredError,
@@ -28,6 +29,7 @@ export interface SyncDeps {
   db: Queryable;
   telegram: TelegramPort;
   parser: EventParser;
+  classifier: EventCategoryClassifier;
   /** Hours re-read on top of the lookback window so edits and late replies land. */
   overlapHours: number;
   now?: () => Date;
@@ -65,7 +67,7 @@ export async function runSyncForConnection(
   target: SyncTarget,
   options: { runId?: string } = {},
 ): Promise<SyncResult> {
-  const { db, telegram, parser } = deps;
+  const { db, telegram, parser, classifier } = deps;
   const now = deps.now ?? (() => new Date());
   const sleep = deps.sleep ?? ((ms: number) => new Promise((r) => setTimeout(r, ms)));
   const log = deps.log ?? (() => {});
@@ -162,7 +164,15 @@ export async function runSyncForConnection(
           now: now().toISOString(),
         });
 
-        for (const candidate of candidates) {
+        for (const parsedCandidate of candidates) {
+          const categories = await classifier.classify({
+            title: parsedCandidate.title,
+            description: parsedCandidate.description,
+            locationName: parsedCandidate.locationName,
+            sourceLabel: chat.title,
+            evidenceText: parsedCandidate.evidence.map((item) => item.normalizedText).join("\n"),
+          });
+          const candidate = { ...parsedCandidate, categories };
           const rawMessageIds = chain.messages
             .map((message) => idByTelegramId.get(message.telegramMessageId))
             .filter((id): id is string => Boolean(id));
@@ -187,6 +197,7 @@ export async function runSyncForConnection(
               rsvpUrl: candidate.rsvpUrl,
               directionsChannel: candidate.directionsChannel,
               sourceLabel: chat.title,
+              categories: candidate.categories,
             });
             result.eventsWritten += 1;
           }

@@ -17,6 +17,7 @@ import {
   type TelegramChat,
 } from "../telegram/port.js";
 import { runSyncForConnection } from "./engine.js";
+import { DeterministicEventCategoryClassifier } from "../classification/classifier.js";
 
 const KEY = Buffer.alloc(32, 3).toString("base64");
 
@@ -52,6 +53,7 @@ function deps(telegram: FakeTelegramPort, sleep: (ms: number) => Promise<void>) 
     db: database.pool,
     telegram,
     parser: new StubEventParser(),
+    classifier: new DeterministicEventCategoryClassifier(),
     overlapHours: 24,
     now: () => SYNC_NOW,
     sleep,

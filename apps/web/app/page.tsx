@@ -5,13 +5,23 @@ import { demoEvents } from './lib/demo-events';
 import {
   correctEvent,
   fetchEvents,
+  fetchPreferences,
   icsDownloadUrl,
   isDemoMode,
+  savePreferences,
   updateEventStatus,
   type CalendarEventView,
   type EventCorrection,
   type EventReviewStatus,
 } from './lib/events-api';
+import {
+  CATEGORY_LABELS,
+  DEFAULT_PREFERENCES,
+  EVENT_CATEGORIES,
+  eventMatchesPreferences,
+  type EventCategory,
+  type UserPreferencesView,
+} from './lib/preferences';
 
 const weekdayLabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
@@ -137,11 +147,22 @@ export default function Home() {
   const [correction, setCorrection] = useState<EventCorrection | null>(null);
   const [viewerTimeZone, setViewerTimeZone] = useState('UTC');
   const [todayKey, setTodayKey] = useState<string | null>(null);
+  const [preferences, setPreferences] = useState<UserPreferencesView>(DEFAULT_PREFERENCES);
+  const [preferenceDraft, setPreferenceDraft] = useState<UserPreferencesView>(DEFAULT_PREFERENCES);
+  const [preferencesOpen, setPreferencesOpen] = useState(false);
+  const [locationDraft, setLocationDraft] = useState('');
+  const [preferencesError, setPreferencesError] = useState<string | null>(null);
+  const [preferencesSaving, setPreferencesSaving] = useState(false);
+
+  const preferenceFilteredEvents = useMemo(
+    () => isDemoMode ? events.filter((event) => eventMatchesPreferences(event, preferences)) : events,
+    [events, preferences],
+  );
 
   const range = useMemo(() => calendarRange(activeMonth), [activeMonth]);
   const sources = useMemo(
-    () => Array.from(new Set(events.map((event) => event.sourceLabel).filter((value): value is string => Boolean(value)))).sort(),
-    [events],
+    () => Array.from(new Set(preferenceFilteredEvents.map((event) => event.sourceLabel).filter((value): value is string => Boolean(value)))).sort(),
+    [preferenceFilteredEvents],
   );
 
   const loadEvents = useCallback(async () => {
@@ -171,6 +192,21 @@ export default function Home() {
   }, [loadEvents]);
 
   useEffect(() => {
+    if (isDemoMode) return;
+    const timeout = window.setTimeout(() => {
+      void fetchPreferences()
+        .then((next) => {
+          setPreferences(next);
+          setPreferenceDraft(next);
+        })
+        .catch((error: unknown) => setLoadError(
+          error instanceof Error ? error.message : 'Could not load preferences.',
+        ));
+    }, 0);
+    return () => window.clearTimeout(timeout);
+  }, []);
+
+  useEffect(() => {
     const timeout = window.setTimeout(() => {
       setViewerTimeZone(Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC');
       setTodayKey(toDateKey(new Date()));
@@ -187,7 +223,7 @@ export default function Home() {
 
   const visibleEvents = useMemo(() => {
     const normalizedQuery = query.trim().toLocaleLowerCase();
-    return events.filter((event) => {
+    return preferenceFilteredEvents.filter((event) => {
       if (event.status === 'dismissed') return false;
       if (statusFilter === 'unconfirmed' && event.status !== 'unconfirmed') {
         return false;
@@ -199,7 +235,7 @@ export default function Home() {
         .filter(Boolean)
         .some((value) => value!.toLocaleLowerCase().includes(normalizedQuery));
     });
-  }, [events, query, sourceFilter, statusFilter]);
+  }, [preferenceFilteredEvents, query, sourceFilter, statusFilter]);
 
   const days = useMemo(() => calendarDays(activeMonth), [activeMonth]);
   const eventsByDay = useMemo(() => {
@@ -210,8 +246,63 @@ export default function Home() {
     }, {});
   }, [viewerTimeZone, visibleEvents]);
 
-  const reviewEvents = events.filter((event) => event.status === 'unconfirmed');
-  const selectedEvent = events.find((event) => event.id === selectedEventId) ?? null;
+  const reviewEvents = preferenceFilteredEvents.filter((event) => event.status === 'unconfirmed');
+  const selectedEvent = preferenceFilteredEvents.find((event) => event.id === selectedEventId) ?? null;
+
+  function openPreferences() {
+    setPreferenceDraft({
+      interestCategories: [...preferences.interestCategories],
+      locationTerms: [...preferences.locationTerms],
+    });
+    setLocationDraft('');
+    setPreferencesError(null);
+    setPreferencesOpen(true);
+  }
+
+  function toggleInterest(category: EventCategory) {
+    setPreferenceDraft((current) => ({
+      ...current,
+      interestCategories: current.interestCategories.includes(category)
+        ? current.interestCategories.filter((item) => item !== category)
+        : [...current.interestCategories, category],
+    }));
+  }
+
+  function addLocation() {
+    const location = locationDraft.trim();
+    if (!location) return;
+    if (preferenceDraft.locationTerms.some((item) => item.toLocaleLowerCase() === location.toLocaleLowerCase())) {
+      setLocationDraft('');
+      return;
+    }
+    setPreferenceDraft((current) => ({
+      ...current,
+      locationTerms: [...current.locationTerms, location],
+    }));
+    setLocationDraft('');
+  }
+
+  async function persistPreferences() {
+    if (preferenceDraft.interestCategories.length === 0) {
+      setPreferencesError('Choose at least one interest.');
+      return;
+    }
+    setPreferencesSaving(true);
+    setPreferencesError(null);
+    try {
+      const saved = isDemoMode ? preferenceDraft : await savePreferences(preferenceDraft);
+      setPreferences(saved);
+      setPreferenceDraft(saved);
+      setPreferencesOpen(false);
+      setSelectedEventId(null);
+      if (!isDemoMode) await loadEvents();
+      setNotice('Preferences saved');
+    } catch (error) {
+      setPreferencesError(error instanceof Error ? error.message : 'Could not save preferences.');
+    } finally {
+      setPreferencesSaving(false);
+    }
+  }
 
   const reviewEvent = useCallback(async (
     event: CalendarEventView,
@@ -282,7 +373,7 @@ export default function Home() {
         ? { ...event, ...payload }
         : await correctEvent(event.id, payload);
       setEvents((current) => current.map((item) => (item.id === event.id ? updated : item)));
-      setNotice('Correction saved');
+      setNotice('Changes saved');
       setEditingEventId(null);
       setCorrection(null);
     } catch (error) {
@@ -366,7 +457,7 @@ export default function Home() {
   return (
     <main className="app-shell">
       <header className="topbar">
-        <a className="brand" href="#top" aria-label="EasyCal home">
+        <a className="brand" href="#top" aria-label="easycal home">
           <span className="brand-mark" aria-hidden="true"><span /><span /></span>
           <span>easycal</span>
         </a>
@@ -445,6 +536,10 @@ export default function Home() {
               aria-pressed={statusFilter === 'unconfirmed'}
             >Needs review</button>
           </div>
+          <button className="preferences-button" type="button" onClick={openPreferences}>
+            <span aria-hidden="true">☷</span>
+            Preferences
+          </button>
           <a
             className={`export-button ${isDemoMode ? 'is-disabled' : ''}`}
             href={isDemoMode ? undefined : icsDownloadUrl(range.from, range.to)}
@@ -505,6 +600,13 @@ export default function Home() {
                 );
               })}
             </div>
+            {!isLoading && visibleEvents.length === 0 && (
+              <div className="calendar-empty">
+                <strong>No matching events</strong>
+                <span>Try broadening your interests or preferred locations.</span>
+                <button type="button" onClick={openPreferences}>Edit preferences</button>
+              </div>
+            )}
             {isLoading && <div className="calendar-loading" role="status">Loading your calendar…</div>}
           </section>
 
@@ -555,6 +657,11 @@ export default function Home() {
                 </div>
                 <h3>{selectedEvent.title}</h3>
                 <p className="detail-description">{selectedEvent.description}</p>
+                <div className="category-list" aria-label="Event categories">
+                  {selectedEvent.categories.map((category) => (
+                    <span key={category}>{CATEGORY_LABELS[category]}</span>
+                  ))}
+                </div>
                 <dl>
                   <div>
                     <dt><span aria-hidden="true">◷</span><span className="sr-only">When</span></dt>
@@ -597,7 +704,7 @@ export default function Home() {
                       type="button"
                       disabled={updatingId === selectedEvent.id}
                       onClick={() => beginCorrection(selectedEvent)}
-                    >Correct</button>
+                    >Edit</button>
                     <button
                       className="accept-button"
                       type="button"
@@ -611,7 +718,7 @@ export default function Home() {
                 )}
                 {selectedEvent.status === 'confirmed' && (
                   <div className="confirmed-actions">
-                    <button className="correct-button" type="button" onClick={() => beginCorrection(selectedEvent)}>Correct details</button>
+                    <button className="correct-button" type="button" onClick={() => beginCorrection(selectedEvent)}>Edit details</button>
                     <button className="remove-button" type="button" onClick={() => void reviewEvent(selectedEvent, 'dismissed')}>Dismiss</button>
                   </div>
                 )}
@@ -625,7 +732,7 @@ export default function Home() {
             <span className={`connection-dot ${isDemoMode ? 'demo' : ''}`} aria-hidden="true" />
             {isDemoMode
               ? 'Showing safe demo data. Add NEXT_PUBLIC_API_BASE_URL to connect the backend.'
-              : 'Calendar is connected to EasyCal.'}
+              : 'Calendar is connected to easycal.'}
           </p>
           <span>Times shown in your local timezone</span>
         </footer>
@@ -645,7 +752,7 @@ export default function Home() {
             <div className="dialog-heading">
               <div>
                 <p className="eyebrow">Review extraction</p>
-                <h2 id="correction-title">Correct event details</h2>
+                <h2 id="correction-title">Edit event details</h2>
               </div>
               <button
                 className="dialog-close"
@@ -709,7 +816,91 @@ export default function Home() {
             <div className="dialog-actions">
               <button type="button" onClick={() => { setEditingEventId(null); setCorrection(null); }}>Cancel</button>
               <button className="save-button" type="submit" disabled={updatingId === editingEventId}>
-                {updatingId === editingEventId ? 'Saving…' : 'Save correction'}
+                {updatingId === editingEventId ? 'Saving…' : 'Save changes'}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+      {preferencesOpen && (
+        <div className="modal-backdrop" role="presentation">
+          <form
+            className="correction-dialog preferences-dialog"
+            aria-labelledby="preferences-title"
+            onSubmit={(event) => {
+              event.preventDefault();
+              void persistPreferences();
+            }}
+          >
+            <div className="dialog-heading">
+              <div>
+                <p className="eyebrow">Keep the signal</p>
+                <h2 id="preferences-title">Your preferences</h2>
+              </div>
+              <button className="dialog-close" type="button" aria-label="Close preferences" onClick={() => setPreferencesOpen(false)}>×</button>
+            </div>
+            <p className="preferences-intro">Only events matching at least one interest will reach your calendar.</p>
+            <fieldset className="preference-group">
+              <legend>Interests</legend>
+              <div className="interest-grid">
+                {EVENT_CATEGORIES.filter((category) => category !== 'other').map((category) => {
+                  const selected = preferenceDraft.interestCategories.includes(category);
+                  return (
+                    <button
+                      key={category}
+                      type="button"
+                      className={selected ? 'selected' : ''}
+                      aria-pressed={selected}
+                      onClick={() => toggleInterest(category)}
+                    >
+                      <span aria-hidden="true">{selected ? '✓' : '+'}</span>
+                      {CATEGORY_LABELS[category]}
+                    </button>
+                  );
+                })}
+              </div>
+            </fieldset>
+            <fieldset className="preference-group">
+              <legend>Preferred locations <small>optional</small></legend>
+              <p>Leave empty to see matching interests anywhere.</p>
+              {preferenceDraft.locationTerms.length > 0 && (
+                <div className="location-chips">
+                  {preferenceDraft.locationTerms.map((location) => (
+                    <button
+                      key={location}
+                      type="button"
+                      onClick={() => setPreferenceDraft((current) => ({
+                        ...current,
+                        locationTerms: current.locationTerms.filter((item) => item !== location),
+                      }))}
+                    >
+                      {location} <span aria-hidden="true">×</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+              <div className="location-input">
+                <input
+                  value={locationDraft}
+                  maxLength={80}
+                  placeholder="e.g. NUS, Kent Ridge, online"
+                  aria-label="Add preferred location"
+                  onChange={(event) => setLocationDraft(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter') {
+                      event.preventDefault();
+                      addLocation();
+                    }
+                  }}
+                />
+                <button type="button" onClick={addLocation}>Add</button>
+              </div>
+            </fieldset>
+            {preferencesError && <p className="preferences-error" role="alert">{preferencesError}</p>}
+            <div className="dialog-actions">
+              <button type="button" onClick={() => setPreferencesOpen(false)}>Cancel</button>
+              <button className="save-button" type="submit" disabled={preferencesSaving}>
+                {preferencesSaving ? 'Saving…' : 'Save preferences'}
               </button>
             </div>
           </form>

@@ -17,6 +17,7 @@ const eventQuery = z.object({
 
 const patchBody = z.union([
   z.object({ action: z.literal("dismiss") }),
+  z.object({ action: z.literal("confirm") }),
   z.object({
     action: z.literal("correct"),
     title: z.string().min(1).optional(),
@@ -75,6 +76,12 @@ export function registerEventRoutes(app: FastifyInstance, context: AppContext): 
       const dismissed = await dismissEvent(context.db, user.id, id);
       if (!dismissed) return reply.code(404).send({ error: "not_found" });
       return reply.send({ ok: true, status: "dismissed" });
+    }
+
+    if (parsed.data.action === "confirm") {
+      const event = await findEventById(context.db, user.id, id);
+      if (!event) return reply.code(404).send({ error: "not_found" });
+      return reply.send({ event });
     }
 
     const { action: _action, ...patch } = parsed.data;

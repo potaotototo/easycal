@@ -5,7 +5,6 @@ import { demoEvents } from '../../lib/demo-events';
 import {
   fetchPublicSnapshot,
   isDemoMode,
-  type CalendarEventView,
   type PublicSnapshot,
 } from '../../lib/events-api';
 
@@ -39,7 +38,7 @@ function demoSnapshot(): PublicSnapshot {
   };
 }
 
-function formatDate(event: Omit<CalendarEventView, 'status'>) {
+function formatDate(event: PublicSnapshot['events'][number]) {
   const [year, month, day] = event.eventDate.split('-').map(Number);
   return new Intl.DateTimeFormat('en-SG', {
     day: 'numeric',
@@ -48,7 +47,7 @@ function formatDate(event: Omit<CalendarEventView, 'status'>) {
   }).format(new Date(year, month - 1, day));
 }
 
-function formatTime(event: Omit<CalendarEventView, 'status'>) {
+function formatTime(event: PublicSnapshot['events'][number]) {
   if (event.allDay || !event.startAt) return 'All day';
   return new Intl.DateTimeFormat('en-SG', {
     hour: 'numeric',
@@ -76,7 +75,7 @@ export default async function SnapshotPage({ params }: SnapshotPageProps) {
   return (
     <main className="snapshot-shell">
       <header className="snapshot-topbar">
-        <Link className="brand" href="/" aria-label="EasyCal home">
+        <Link className="brand" href="/" aria-label="easycal home">
           <span className="brand-mark" aria-hidden="true"><span /><span /></span>
           <span>easycal</span>
         </Link>
@@ -87,7 +86,7 @@ export default async function SnapshotPage({ params }: SnapshotPageProps) {
         <section className="snapshot-hero">
           <p className="eyebrow">Shared calendar</p>
           <h1>{snapshot.title}</h1>
-          <p>A finalised collection shared from EasyCal. Event details may change on the organiser’s RSVP page.</p>
+          <p>A finalised collection shared from easycal. Event details may change on the organiser’s RSVP page.</p>
         </section>
 
         {snapshot.events.length > 0 ? (
@@ -117,7 +116,7 @@ export default async function SnapshotPage({ params }: SnapshotPageProps) {
           <p className="snapshot-empty">No events have been added to this snapshot yet.</p>
         )}
 
-        <footer className="snapshot-footer">Shared with EasyCal · No private messages or review notes are included.</footer>
+        <footer className="snapshot-footer">Shared with easycal · No private messages or review notes are included.</footer>
       </div>
     </main>
   );

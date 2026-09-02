@@ -22,6 +22,7 @@ import {
 import { StubEventParser } from "../parser/stub.js";
 import { FakeTelegramPort } from "../telegram/fake.js";
 import { runSyncForConnection } from "./engine.js";
+import { DeterministicEventCategoryClassifier } from "../classification/classifier.js";
 
 /**
  * Person A's acceptance check from docs/workstreams.md:
@@ -76,6 +77,7 @@ function sync() {
       db: database.pool,
       telegram,
       parser: new StubEventParser(),
+      classifier: new DeterministicEventCategoryClassifier(),
       overlapHours: 24,
       now: () => SYNC_NOW,
     },
@@ -108,6 +110,7 @@ describe("acceptance: folder to public snapshot", () => {
     expect(noc!.rsvpUrl).toBe("https://forms.cloud.microsoft/r/0YVwa8YMEy");
     expect(noc!.locationName).toBe("NUS Enterprise I3 MPH, Level 2");
     expect(noc!.sourceLabel).toBe("NUS Start IT");
+    expect(noc!.categories).toEqual(expect.arrayContaining(["entrepreneurship", "education"]));
   });
 
   it("treats a date without a time as an all-day event", async () => {

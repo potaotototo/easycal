@@ -1,6 +1,27 @@
 export type EventStatus = "confirmed" | "unconfirmed" | "dismissed";
 export type Confidence = "high" | "medium" | "low";
 
+export const EVENT_CATEGORIES = [
+  "career",
+  "internships",
+  "technology",
+  "entrepreneurship",
+  "education",
+  "networking",
+  "community",
+  "volunteering",
+  "sports_wellness",
+  "arts_culture",
+  "social",
+  "other",
+] as const;
+
+export type EventCategory = (typeof EVENT_CATEGORIES)[number];
+
+export function isEventCategory(value: unknown): value is EventCategory {
+  return typeof value === "string" && (EVENT_CATEGORIES as readonly string[]).includes(value);
+}
+
 export interface LinkEntity {
   label: string;
   url: string;
@@ -31,6 +52,7 @@ export interface EventCandidate {
   address: string | null;
   rsvpUrl: string | null;
   directionsChannel: string | null;
+  categories: EventCategory[];
   evidence: MessageEvidence[];
   reviewReasons: string[];
 }
@@ -48,9 +70,8 @@ export interface CalendarEvent {
   address: string | null;
   rsvpUrl: string | null;
   sourceLabel: string | null;
+  categories: EventCategory[];
 }
 
 /** A copied public representation: no raw message text, Telegram IDs, or source URLs. */
-export interface ShareSnapshotEvent extends CalendarEvent {
-  sourceLabel: string | null;
-}
+export type ShareSnapshotEvent = Omit<CalendarEvent, "categories">;

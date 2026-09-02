@@ -49,6 +49,7 @@ export class StubEventParser implements EventParser {
       address: extractAddress(text),
       rsvpUrl: extractRsvpUrl(links, text),
       directionsChannel: extractChannelHandle(text),
+      categories: ["other"],
       evidence: chain.messages,
       reviewReasons,
     };

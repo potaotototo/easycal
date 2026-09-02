@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
-import type { CalendarEvent, EventCandidate } from "@easycal/contracts/event";
+import { isEventCategory, type CalendarEvent, type EventCandidate } from "@easycal/contracts/event";
 import type { Queryable } from "../types.js";
+import { getOrCreatePreferences } from "./preferences.js";
 
 export interface StoredCandidate {
   id: string;
@@ -101,6 +102,7 @@ export interface CalendarEventInput {
   rsvpUrl: string | null;
   directionsChannel: string | null;
   sourceLabel: string | null;
+  categories: CalendarEvent["categories"];
 }
 
 /**
@@ -119,12 +121,15 @@ export async function upsertCalendarEvent(
   if (!event.allDay && !startAt) {
     throw new Error("A timed event must have startAt");
   }
+  if (event.categories.length === 0 || event.categories.some((category) => !isEventCategory(category))) {
+    throw new Error("At least one valid event category is required");
+  }
 
   const { rows } = await db.query(
     `insert into calendar_events
        (id, candidate_id, user_id, title, description, event_date, start_at, end_at,
-        timezone, all_day, location_name, address, rsvp_url, directions_channel, source_label)
-     values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+        timezone, all_day, location_name, address, rsvp_url, directions_channel, source_label, categories)
+     values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16::text[])
      on conflict (candidate_id) do update
        set title = excluded.title, description = excluded.description,
            event_date = excluded.event_date, start_at = excluded.start_at,
@@ -132,12 +137,13 @@ export async function upsertCalendarEvent(
            all_day = excluded.all_day, location_name = excluded.location_name,
            address = excluded.address, rsvp_url = excluded.rsvp_url,
            directions_channel = excluded.directions_channel,
-           source_label = excluded.source_label
+           source_label = excluded.source_label, categories = excluded.categories
      returning id`,
     [
       randomUUID(), candidateId, userId, event.title, event.description, event.eventDate,
       startAt, endAt, event.timezone, event.allDay, event.locationName, event.address,
       event.rsvpUrl, event.directionsChannel, event.sourceLabel,
+      event.categories,
     ],
   );
   return rows[0]!["id"] as string;
@@ -157,6 +163,7 @@ export async function listEvents(
   userId: string,
   filters: EventFilters = {},
 ): Promise<CalendarEvent[]> {
+  await getOrCreatePreferences(db, userId);
   const conditions = ["e.user_id = $1", "c.status <> 'dismissed'"];
   const params: unknown[] = [userId];
 
@@ -187,10 +194,20 @@ export async function listEvents(
 
   const { rows } = await db.query(
     `select e.id, e.title, e.description, e.event_date, e.start_at, e.end_at,
-            e.timezone, e.all_day, e.location_name, e.address, e.rsvp_url, e.source_label
+            e.timezone, e.all_day, e.location_name, e.address, e.rsvp_url, e.source_label,
+            e.categories
        from calendar_events e
        join event_candidates c on c.id = e.candidate_id
+       join user_preferences p on p.user_id = e.user_id
       where ${conditions.join(" and ")}
+        and e.categories && p.interest_categories
+        and (
+          cardinality(p.location_terms) = 0
+          or exists (
+            select 1 from unnest(p.location_terms) as preferred_location
+             where position(lower(preferred_location) in lower(concat_ws(' ', e.location_name, e.address))) > 0
+          )
+        )
       order by e.event_date asc, e.start_at asc nulls first
       limit $${params.length}`,
     params,
@@ -205,7 +222,7 @@ export async function findEventById(
 ): Promise<CalendarEvent | null> {
   const { rows } = await db.query(
     `select id, title, description, event_date, start_at, end_at, timezone,
-            all_day, location_name, address, rsvp_url, source_label
+            all_day, location_name, address, rsvp_url, source_label, categories
        from calendar_events where id = $1 and user_id = $2`,
     [eventId, userId],
   );
@@ -273,5 +290,6 @@ function mapCalendarEvent(row: Record<string, unknown>): CalendarEvent {
     address: (row["address"] as string | null) ?? null,
     rsvpUrl: (row["rsvp_url"] as string | null) ?? null,
     sourceLabel: (row["source_label"] as string | null) ?? null,
+    categories: row["categories"] as CalendarEvent["categories"],
   };
 }

@@ -16,6 +16,8 @@ const schema = z.object({
   TELEGRAM_API_ID: optionalPositiveInt,
   TELEGRAM_API_HASH: optionalText,
   SESSION_ENCRYPTION_KEY: optionalText,
+  OPENAI_API_KEY: optionalText,
+  OPENAI_CATEGORY_MODEL: optionalText,
 });
 
 export type Env = z.infer<typeof schema>;

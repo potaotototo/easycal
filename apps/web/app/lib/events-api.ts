@@ -1,3 +1,5 @@
+import type { EventCategory, UserPreferencesView } from './preferences';
+
 export type EventReviewStatus = 'confirmed' | 'unconfirmed' | 'dismissed';
 
 export interface CalendarEventView {
@@ -14,6 +16,7 @@ export interface CalendarEventView {
   rsvpUrl: string | null;
   sourceLabel: string | null;
   status: EventReviewStatus;
+  categories: EventCategory[];
 }
 
 export type EventCorrection = Pick<
@@ -30,7 +33,7 @@ export type EventCorrection = Pick<
 
 export interface PublicSnapshot {
   title: string;
-  events: Omit<CalendarEventView, 'status'>[];
+  events: Omit<CalendarEventView, 'status' | 'categories'>[];
 }
 
 export function normalizePublicSnapshot(payload: unknown): PublicSnapshot {
@@ -96,6 +99,7 @@ function normalizeEvent(event: Partial<CalendarEventView> & { id: string }) {
     rsvpUrl: event.rsvpUrl ?? null,
     sourceLabel: event.sourceLabel ?? null,
     status: event.status ?? 'confirmed',
+    categories: event.categories ?? ['other'],
   } satisfies CalendarEventView;
 }
 
@@ -136,7 +140,7 @@ export async function updateEventStatus(
       Accept: 'application/json',
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({ status }),
+    body: JSON.stringify({ action: status === 'dismissed' ? 'dismiss' : 'confirm' }),
   });
 
   if (!response.ok) {
@@ -147,7 +151,9 @@ export async function updateEventStatus(
     return null;
   }
 
-  return response.json() as Promise<CalendarEventView>;
+  const payload = await response.json() as CalendarEventView | { event?: CalendarEventView };
+  const event = 'event' in payload ? payload.event : payload;
+  return event ? normalizeEvent(event) : null;
 }
 
 export async function correctEvent(id: string, correction: EventCorrection) {
@@ -158,14 +164,46 @@ export async function correctEvent(id: string, correction: EventCorrection) {
       Accept: 'application/json',
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({ correction }),
+    body: JSON.stringify({
+      action: 'correct',
+      title: correction.title,
+      locationName: correction.locationName,
+      address: correction.address,
+      rsvpUrl: correction.rsvpUrl,
+    }),
   });
 
   if (!response.ok) {
     throw new Error(`Could not save correction (${response.status})`);
   }
 
-  return response.json() as Promise<CalendarEventView>;
+  const payload = await response.json() as CalendarEventView | { event?: CalendarEventView };
+  const event = 'event' in payload ? payload.event : payload;
+  const normalized = event ? normalizeEvent(event) : null;
+  if (!normalized) throw new Error('The updated event response was not recognized.');
+  return normalized;
+}
+
+export async function fetchPreferences(): Promise<UserPreferencesView> {
+  const response = await fetch(apiUrl('/v1/preferences'), {
+    credentials: 'include',
+    headers: { Accept: 'application/json' },
+  });
+  if (!response.ok) throw new Error(`Could not load preferences (${response.status})`);
+  return response.json() as Promise<UserPreferencesView>;
+}
+
+export async function savePreferences(
+  preferences: UserPreferencesView,
+): Promise<UserPreferencesView> {
+  const response = await fetch(apiUrl('/v1/preferences'), {
+    method: 'PUT',
+    credentials: 'include',
+    headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
+    body: JSON.stringify(preferences),
+  });
+  if (!response.ok) throw new Error(`Could not save preferences (${response.status})`);
+  return response.json() as Promise<UserPreferencesView>;
 }
 
 export async function fetchPublicSnapshot(token: string): Promise<PublicSnapshot> {

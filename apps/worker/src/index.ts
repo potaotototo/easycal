@@ -13,6 +13,7 @@ import { StubEventParser } from "./parser/stub.js";
 import { runSyncForConnection } from "./sync/engine.js";
 import { createClient, GramJsTelegramPort } from "./telegram/gramjs.js";
 import { loadEnv } from "./env.js";
+import { createEventCategoryClassifier } from "./classification/classifier.js";
 
 /**
  * The worker owns Telegram access. It does two things on a loop:
@@ -27,6 +28,10 @@ import { loadEnv } from "./env.js";
 const env = loadEnv();
 const db = getPool();
 const parser = new StubEventParser(); // swap for Person B's parser at milestone 2
+const classifier = createEventCategoryClassifier({
+  apiKey: env.OPENAI_API_KEY,
+  model: env.OPENAI_CATEGORY_MODEL,
+});
 
 const POLL_INTERVAL_MS = 5_000;
 const SCHEDULE_INTERVAL_MS = Number(process.env["SYNC_INTERVAL_MINUTES"] ?? 15) * 60_000;
@@ -63,6 +68,7 @@ async function executeRun(runId: string, connectionId: string): Promise<void> {
         db,
         telegram,
         parser,
+        classifier,
         overlapHours: env.SYNC_OVERLAP_HOURS,
         log: (message, fields) => console.log(JSON.stringify({ message, ...fields })),
       },

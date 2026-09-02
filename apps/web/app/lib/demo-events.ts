@@ -16,6 +16,7 @@ export const demoEvents: CalendarEventView[] = [
     rsvpUrl: 'https://example.com/designing-with-ai',
     sourceLabel: 'Designers SG',
     status: 'confirmed',
+    categories: ['technology', 'education', 'arts_culture'],
   },
   {
     id: 'founders-breakfast',
@@ -31,6 +32,7 @@ export const demoEvents: CalendarEventView[] = [
     rsvpUrl: null,
     sourceLabel: 'SG Builders',
     status: 'confirmed',
+    categories: ['entrepreneurship', 'networking', 'social'],
   },
   {
     id: 'noc-sharing',
@@ -47,6 +49,7 @@ export const demoEvents: CalendarEventView[] = [
     rsvpUrl: 'https://example.com/noc-sharing',
     sourceLabel: 'NUS Overseas Colleges',
     status: 'unconfirmed',
+    categories: ['entrepreneurship', 'education', 'community'],
   },
   {
     id: 'product-office-hours',
@@ -62,6 +65,7 @@ export const demoEvents: CalendarEventView[] = [
     rsvpUrl: null,
     sourceLabel: 'Product Folks SG',
     status: 'unconfirmed',
+    categories: ['technology', 'education'],
   },
   {
     id: 'hack-weekend',
@@ -77,6 +81,7 @@ export const demoEvents: CalendarEventView[] = [
     rsvpUrl: 'https://example.com/civic-tech',
     sourceLabel: 'Tech for Good',
     status: 'confirmed',
+    categories: ['technology', 'community'],
   },
   {
     id: 'climate-meetup',
@@ -92,6 +97,7 @@ export const demoEvents: CalendarEventView[] = [
     rsvpUrl: null,
     sourceLabel: 'Climate SG',
     status: 'unconfirmed',
+    categories: ['community', 'networking'],
   },
   {
     id: 'creative-mornings',
@@ -107,5 +113,6 @@ export const demoEvents: CalendarEventView[] = [
     rsvpUrl: null,
     sourceLabel: 'CreativeMornings SG',
     status: 'confirmed',
+    categories: ['arts_culture', 'community'],
   },
 ];
