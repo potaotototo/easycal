@@ -84,6 +84,9 @@ export function candidateToCalendarEvent(candidate: EventCandidate): CalendarEve
     throw new Error("Only confirmed candidates with a title and exact date can become calendar events");
   }
   if (!isValidDateOnly(candidate.eventDate)) throw new Error("Calendar event date must be a real YYYY-MM-DD date");
+  if (candidate.timezone && !isValidTimeZone(candidate.timezone)) {
+    throw new Error("Calendar event timezone must be a valid IANA timezone");
+  }
   if (candidate.allDay && (candidate.startAt || candidate.endAt)) {
     throw new Error("All-day events cannot contain timed instants");
   }

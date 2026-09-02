@@ -185,3 +185,24 @@ test("nonexistent DST wall-clock times remain unconfirmed", () => {
   assert.equal(candidate.status, "unconfirmed");
   assert.equal(candidate.startAt, null);
 });
+
+test("calendar conversion rejects invalid timezones on all-day candidates", () => {
+  assert.throws(() => candidateToCalendarEvent({
+    id: "bad-timezone",
+    status: "confirmed",
+    confidence: "medium",
+    title: "All-day event",
+    description: null,
+    startAt: null,
+    endAt: null,
+    eventDate: "2026-10-12",
+    timezone: "Not/AZone",
+    allDay: true,
+    locationName: null,
+    address: null,
+    rsvpUrl: null,
+    directionsChannel: null,
+    evidence: [],
+    reviewReasons: [],
+  }), /timezone/i);
+});
