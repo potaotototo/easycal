@@ -1,4 +1,4 @@
-# Telegram Event Calendar
+# EasyCal
 
 An event-calendar service that lets a person authorize their Telegram account, choose a dynamic chat folder, extract events from recent English messages, and view or share an immutable calendar snapshot.
 
