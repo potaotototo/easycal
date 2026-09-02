@@ -1,0 +1,22 @@
+# Local development stack. v1 targets local docker-compose only; the api and
+# worker services are added here in Phase 1 alongside their Dockerfiles.
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: easycal-postgres
+    environment:
+      POSTGRES_USER: easycal
+      POSTGRES_PASSWORD: easycal
+      POSTGRES_DB: easycal
+    ports:
+      - "5432:5432"
+    volumes:
+      - easycal-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U easycal -d easycal"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  easycal-pgdata:

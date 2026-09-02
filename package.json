@@ -1,0 +1,28 @@
+{
+  "name": "easycal",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@11.25.0",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "build": "pnpm -r build",
+    "typecheck": "pnpm -r typecheck",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "migrate": "pnpm --filter @easycal/db migrate",
+    "migrate:down": "pnpm --filter @easycal/db migrate:down",
+    "db": "pnpm --filter @easycal/db dev-server",
+    "db:reset": "pnpm --filter @easycal/db dev-server:reset",
+    "db:docker": "docker compose -f infra/docker-compose.yml up -d --wait postgres",
+    "db:docker:down": "docker compose -f infra/docker-compose.yml down"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.8"
+  }
+}

@@ -1,3 +1,4 @@
+
 # Two-person work plan
 
 ## Shared rule

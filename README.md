@@ -15,6 +15,20 @@ An event-calendar service that lets a person authorize their Telegram account, c
 - `docs` — architecture and file ownership plan
 - `fixtures` — agreed parser examples
 
+## Local development
+
+Requires Node 22+ and pnpm (`corepack enable pnpm`). No Docker needed.
+
+```sh
+pnpm install
+pnpm db                          # embedded Postgres 17, foreground (Ctrl-C to stop)
+pnpm migrate                     # in another terminal
+pnpm --filter @easycal/api dev   # http://localhost:3000/health
+```
+
+Copy `.env.example` to `.env` and fill it in. `pnpm build`, `pnpm typecheck`, and `pnpm test` all
+run without a database. See [db/README.md](db/README.md) for database details.
+
 Read [the architecture](docs/architecture.md) and [the two-person work plan](docs/workstreams.md) before implementation.
 
 ## Product decisions locked for v1

@@ -1,0 +1,32 @@
+{
+  "name": "@easycal/db",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -b",
+    "dev": "tsc -b --watch",
+    "typecheck": "tsc --noEmit",
+    "migrate": "node --env-file-if-exists=../.env node_modules/node-pg-migrate/bin/node-pg-migrate.mjs up -m migrations",
+    "migrate:down": "node --env-file-if-exists=../.env node_modules/node-pg-migrate/bin/node-pg-migrate.mjs down -m migrations",
+    "migrate:create": "node --env-file-if-exists=../.env node_modules/node-pg-migrate/bin/node-pg-migrate.mjs create -m migrations -j sql",
+    "dev-server": "tsx src/dev-server.ts",
+    "dev-server:reset": "tsx src/dev-server.ts --reset"
+  },
+  "dependencies": {
+    "@easycal/contracts": "workspace:*",
+    "node-pg-migrate": "^7.9.0",
+    "pg": "^8.13.1"
+  },
+  "devDependencies": {
+    "@types/pg": "^8.11.10",
+    "embedded-postgres": "17.10.0-beta.17",
+    "tsx": "^4.23.13"
+  }
+}

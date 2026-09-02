@@ -1,23 +1,12 @@
--- PostgreSQL reference schema: the human-readable model for the whole system.
--- Executable migrations live in db/migrations/ and are applied with `pnpm migrate`.
--- Every schema change lands in BOTH places so the two never drift.
+-- Faithful transcription of db/schema.sql at the time this migration was written.
+-- db/schema.sql remains the human-readable reference model; keep the two in sync.
+
+-- Up Migration
 
 create table users (
   id uuid primary key,
-  -- The Telegram account is the app identity: completing the MTProto login both
-  -- creates and authenticates the user, so a returning user is matched on this.
-  telegram_user_id text not null unique,
   created_at timestamptz not null default now(),
-  device_timezone text not null default 'UTC'
-);
-
-create table user_sessions (
-  id uuid primary key,
-  user_id uuid not null references users(id) on delete cascade,
-  token_hash text not null unique,
-  created_at timestamptz not null default now(),
-  expires_at timestamptz not null,
-  revoked_at timestamptz
+  device_timezone text not null
 );
 
 create table telegram_connections (
@@ -38,16 +27,6 @@ create table folder_selections (
   updated_at timestamptz not null default now()
 );
 
--- Cached folder list. The API cannot decrypt a session to ask Telegram directly,
--- so folders are written right after login and refreshed by each sync run.
-create table telegram_folders (
-  connection_id uuid not null references telegram_connections(id) on delete cascade,
-  telegram_folder_id integer not null,
-  title text not null,
-  refreshed_at timestamptz not null default now(),
-  primary key (connection_id, telegram_folder_id)
-);
-
 create table source_chats (
   id uuid primary key,
   connection_id uuid not null references telegram_connections(id) on delete cascade,
@@ -65,15 +44,6 @@ create table sync_runs (
   started_at timestamptz,
   completed_at timestamptz,
   error_code text
-);
-
--- Per-chat sync progress, so a run resumes instead of re-reading the window.
-create table sync_cursors (
-  connection_id uuid not null references telegram_connections(id) on delete cascade,
-  source_chat_id uuid not null references source_chats(id) on delete cascade,
-  last_message_id text,
-  last_synced_at timestamptz,
-  primary key (connection_id, source_chat_id)
 );
 
 create table raw_messages (
@@ -144,3 +114,17 @@ create table share_snapshot_events (
   position integer not null,
   primary key (snapshot_id, event_id)
 );
+
+-- Down Migration
+
+drop table share_snapshot_events;
+drop table share_snapshots;
+drop table event_evidence;
+drop table calendar_events;
+drop table event_candidates;
+drop table raw_messages;
+drop table sync_runs;
+drop table source_chats;
+drop table folder_selections;
+drop table telegram_connections;
+drop table users;
