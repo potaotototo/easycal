@@ -1,5 +1,6 @@
 import type { EventCandidate, MessageEvidence } from "../../contracts/src/event.js";
 import type { ParserOptions, StructuredModelFallback } from "./types.js";
+import { addDays, isValidTimeZone, zonedDateTimeToInstant } from "./datetime.js";
 import { validateStructuredCandidate } from "./validate.js";
 
 const MONTHS: Record<string, number> = {
@@ -81,14 +82,6 @@ function timezoneFor(text: string, fallback: string): string {
   return /\b(?:singapore|sgt)\b|\b\d{6}\b/i.test(text) ? "Asia/Singapore" : fallback;
 }
 
-function offsetFor(timezone: string): string {
-  return timezone === "Asia/Singapore" ? "+08:00" : "Z";
-}
-
-function instant(eventDate: string, time: ParsedTime, timezone: string): string {
-  return `${eventDate}T${pad(time.hour)}:${pad(time.minute)}:00${offsetFor(timezone)}`;
-}
-
 function cleanLabel(line: string): string {
   return line.replace(/^[\s\p{Emoji_Presentation}\p{Extended_Pictographic}]+/gu, "").trim();
 }
@@ -137,26 +130,36 @@ export function extractDeterministicEvent(
   const parsedTimes = extractTimes(combined);
   const title = extractTitle(lines);
   const { locationName, address } = extractLocation(lines);
-  const timezone = timezoneFor(combined, options.defaultTimezone ?? "UTC");
+  const requestedTimezone = timezoneFor(combined, options.defaultTimezone ?? "UTC");
+  const timezone = isValidTimeZone(requestedTimezone) ? requestedTimezone : null;
   const rsvpUrl = extractRsvp(evidence);
   const directionsChannel = combined.match(/directions?(?:\s+channel)?\s*[:\-]\s*(@[a-z0-9_]+)/i)?.[1] ?? null;
-  const confirmed = Boolean(eventDate && title);
+  const timezoneIsUsable = !parsedTimes || Boolean(timezone);
+  const confirmed = Boolean(eventDate && title && timezoneIsUsable);
   const allDay = Boolean(eventDate && !parsedTimes);
-  const startAt = eventDate && parsedTimes ? instant(eventDate, parsedTimes.start, timezone) : null;
-  const endAt = eventDate && parsedTimes?.end ? instant(eventDate, parsedTimes.end, timezone) : null;
+  const startAt = eventDate && parsedTimes && timezone
+    ? zonedDateTimeToInstant(eventDate, parsedTimes.start.hour, parsedTimes.start.minute, timezone)
+    : null;
+  const endDate = eventDate && parsedTimes?.end && parsedTimes.end.hour * 60 + parsedTimes.end.minute <= parsedTimes.start.hour * 60 + parsedTimes.start.minute
+    ? addDays(eventDate, 1)
+    : eventDate;
+  const endAt = endDate && parsedTimes?.end && timezone
+    ? zonedDateTimeToInstant(endDate, parsedTimes.end.hour, parsedTimes.end.minute, timezone)
+    : null;
   const signals = [eventDate, title, parsedTimes, locationName, rsvpUrl].filter(Boolean).length;
   const reviewReasons: string[] = [];
   if (!eventDate) reviewReasons.push("No trusted absolute event date was found");
   if (!title) reviewReasons.push("No event title was found");
   if (eventDate && !parsedTimes) reviewReasons.push("No time was found; treating this as an all-day event");
   if (!rsvpUrl) reviewReasons.push("No RSVP URL was found");
+  if (!timezoneIsUsable) reviewReasons.push("The configured timezone is not a valid IANA timezone");
 
   return {
     id: `telegram:${evidence[0]!.telegramChatId}:${evidence[0]!.telegramMessageId}`,
     status: confirmed ? "confirmed" : "unconfirmed",
     confidence: confirmed && signals >= 5 ? "high" : confirmed ? "medium" : "low",
     title,
-    description: combined,
+    description: null,
     startAt,
     endAt,
     eventDate,

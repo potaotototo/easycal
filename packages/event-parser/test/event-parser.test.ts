@@ -46,6 +46,7 @@ test("NOC fixture produces a high-confidence timed event with the expected RSVP 
   assert.equal(candidate.address, expected.address);
   assert.equal(candidate.rsvpUrl, expected.rsvpUrl);
   assert.equal(candidate.directionsChannel, expected.directionsChannel);
+  assert.equal(candidate.description, null);
   assert.doesNotThrow(() => candidateToCalendarEvent(candidate));
 });
 
@@ -85,4 +86,55 @@ test("model fallback rejects evidence references that are not in the source chai
     evidence,
   );
   assert.equal(invalid, null);
+});
+
+test("validation rejects impossible dates and inconsistent timed ranges", async () => {
+  const input = await fixture<RawTelegramMessage[]>("no-date.input.json");
+  const evidence = input.map(normalizeTelegramMessage);
+  const base = {
+    title: "Validated event",
+    eventDate: "2026-10-12",
+    allDay: false,
+    startAt: "2026-10-12T10:00:00Z",
+    evidence: [{ telegramChatId: input[0]!.telegramChatId, telegramMessageId: input[0]!.telegramMessageId }],
+  };
+
+  assert.equal(validateStructuredCandidate({ ...base, eventDate: "2026-99-99" }, evidence), null);
+  assert.equal(validateStructuredCandidate({ ...base, endAt: "not-an-instant" }, evidence), null);
+  assert.equal(validateStructuredCandidate({ ...base, endAt: "2026-10-12T09:00:00Z" }, evidence), null);
+  assert.equal(validateStructuredCandidate({ ...base, startAt: "2026-10-13T10:00:00Z" }, evidence), null);
+});
+
+test("deterministic extraction resolves IANA timezones and overnight ranges", () => {
+  const evidence = [normalizeTelegramMessage({
+    telegramChatId: "timezone-chat",
+    telegramMessageId: "1",
+    sentAt: "2026-01-01T12:00:00Z",
+    text: "New York meetup\nDate: January 15, 2026\nTime: 10pm-1am",
+  })];
+  const candidate = extractDeterministicEvent(evidence, { defaultTimezone: "America/New_York" });
+
+  assert.equal(new Date(candidate.startAt!).toISOString(), "2026-01-16T03:00:00.000Z");
+  assert.equal(new Date(candidate.endAt!).toISOString(), "2026-01-16T06:00:00.000Z");
+  assert.doesNotThrow(() => candidateToCalendarEvent(candidate));
+});
+
+test("chain proximity does not merge adjacent complete event announcements", () => {
+  const messages: RawTelegramMessage[] = [
+    {
+      telegramChatId: "events",
+      telegramMessageId: "1",
+      sentAt: "2026-09-01T10:00:00Z",
+      text: "AI meetup\nDate: 2 September\nTime: 7pm",
+    },
+    {
+      telegramChatId: "events",
+      telegramMessageId: "2",
+      sentAt: "2026-09-01T10:10:00Z",
+      text: "Payments meetup\nDate: 3 September\nTime: 6pm",
+    },
+  ];
+
+  const chain = assembleMessageChain(messages, "1");
+  assert.deepEqual(chain.map((item) => item.telegramMessageId), ["1"]);
 });

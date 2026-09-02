@@ -1,6 +1,5 @@
 import type { CalendarEvent, EventCandidate, MessageEvidence } from "../../contracts/src/event.js";
-
-const DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/;
+import { dateInTimeZone, isValidDateOnly, isValidTimeZone } from "./datetime.js";
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
@@ -25,6 +24,13 @@ function validInstant(value: string | null): boolean {
   return value === null || !Number.isNaN(Date.parse(value));
 }
 
+function validTimedRange(eventDate: string, startAt: string | null, endAt: string | null, timezone: string | null): boolean {
+  if (!startAt || !timezone || !isValidTimeZone(timezone)) return false;
+  if (dateInTimeZone(startAt, timezone) !== eventDate) return false;
+  if (endAt && Date.parse(endAt) <= Date.parse(startAt)) return false;
+  return true;
+}
+
 export function validateStructuredCandidate(
   value: unknown,
   evidence: MessageEvidence[],
@@ -35,16 +41,17 @@ export function validateStructuredCandidate(
   const allDay = value.allDay === true;
   const startAt = nullableString(value.startAt);
   const endAt = nullableString(value.endAt);
+  const timezone = nullableString(value.timezone);
   const allowedEvidence = new Set(evidence.map((item) => `${item.telegramChatId}:${item.telegramMessageId}`));
   const requestedEvidence = Array.isArray(value.evidence)
     ? value.evidence.filter(isRecord).map((item) => `${String(item.telegramChatId)}:${String(item.telegramMessageId)}`)
     : [];
   const referencesAreValid = requestedEvidence.length > 0 && requestedEvidence.every((id) => allowedEvidence.has(id));
 
-  if (!eventDate || !DATE_ONLY.test(eventDate) || !title || !referencesAreValid) return null;
+  if (!eventDate || !isValidDateOnly(eventDate) || !title || !referencesAreValid) return null;
   if (!validInstant(startAt) || !validInstant(endAt)) return null;
   if (allDay && (startAt || endAt)) return null;
-  if (!allDay && !startAt) return null;
+  if (!allDay && !validTimedRange(eventDate, startAt, endAt, timezone)) return null;
 
   const rsvpUrl = safeUrl(value.rsvpUrl);
   if (value.rsvpUrl && !rsvpUrl) return null;
@@ -54,11 +61,11 @@ export function validateStructuredCandidate(
     status: "confirmed",
     confidence: value.confidence === "high" ? "high" : "medium",
     title,
-    description: nullableString(value.description),
+    description: null,
     startAt,
     endAt,
     eventDate,
-    timezone: nullableString(value.timezone),
+    timezone,
     allDay,
     locationName: nullableString(value.locationName),
     address: nullableString(value.address),
@@ -75,13 +82,14 @@ export function candidateToCalendarEvent(candidate: EventCandidate): CalendarEve
   if (candidate.status !== "confirmed" || !candidate.title || !candidate.eventDate) {
     throw new Error("Only confirmed candidates with a title and exact date can become calendar events");
   }
-  if (!DATE_ONLY.test(candidate.eventDate)) throw new Error("Calendar event date must be YYYY-MM-DD");
+  if (!isValidDateOnly(candidate.eventDate)) throw new Error("Calendar event date must be a real YYYY-MM-DD date");
   if (candidate.allDay && (candidate.startAt || candidate.endAt)) {
     throw new Error("All-day events cannot contain timed instants");
   }
-  if (!candidate.allDay && (!candidate.startAt || !validInstant(candidate.startAt))) {
-    throw new Error("Timed events require a valid start instant");
+  if (!candidate.allDay && !validTimedRange(candidate.eventDate, candidate.startAt, candidate.endAt, candidate.timezone)) {
+    throw new Error("Timed events require a valid timezone and chronological instants on the event date");
   }
+  if (!validInstant(candidate.endAt)) throw new Error("Event end instant must be valid");
   if (candidate.rsvpUrl && !safeUrl(candidate.rsvpUrl)) throw new Error("RSVP URL must use HTTP or HTTPS");
 
   return {

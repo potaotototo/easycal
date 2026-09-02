@@ -1,5 +1,6 @@
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
+import type { Metadata } from 'next';
 import { demoEvents } from '../../lib/demo-events';
 import {
   fetchPublicSnapshot,
@@ -11,6 +12,10 @@ import {
 interface SnapshotPageProps {
   params: Promise<{ token: string }>;
 }
+
+export const metadata: Metadata = {
+  robots: { index: false, follow: false },
+};
 
 function demoSnapshot(): PublicSnapshot {
   return {
@@ -96,7 +101,6 @@ export default async function SnapshotPage({ params }: SnapshotPageProps) {
                 <div className="snapshot-copy">
                   <h2>{event.title}</h2>
                   <p className="snapshot-meta">{formatTime(event)}</p>
-                  {event.description && <p className="snapshot-description">{event.description}</p>}
                   {(event.locationName || event.address) && (
                     <p className="snapshot-location">{[event.locationName, event.address].filter(Boolean).join(' · ')}</p>
                   )}

@@ -22,12 +22,6 @@ function toDateKey(date: Date) {
   return `${year}-${month}-${day}`;
 }
 
-function monthRange(month: Date) {
-  const from = new Date(month.getFullYear(), month.getMonth(), 1);
-  const to = new Date(month.getFullYear(), month.getMonth() + 1, 0);
-  return { from: toDateKey(from), to: toDateKey(to) };
-}
-
 function calendarDays(month: Date) {
   const first = new Date(month.getFullYear(), month.getMonth(), 1);
   const mondayOffset = (first.getDay() + 6) % 7;
@@ -38,6 +32,23 @@ function calendarDays(month: Date) {
     date.setDate(start.getDate() + index);
     return date;
   });
+}
+
+function calendarRange(month: Date) {
+  const days = calendarDays(month);
+  return { from: toDateKey(days[0]!), to: toDateKey(days.at(-1)!) };
+}
+
+function eventDisplayDateKey(event: CalendarEventView, viewerTimeZone: string) {
+  if (event.allDay || !event.startAt) return event.eventDate;
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    timeZone: viewerTimeZone,
+  }).formatToParts(new Date(event.startAt));
+  const value = (type: Intl.DateTimeFormatPartTypes) => parts.find((part) => part.type === type)?.value;
+  return `${value('year')}-${value('month')}-${value('day')}`;
 }
 
 function formatMonth(month: Date) {
@@ -57,7 +68,16 @@ function formatTime(event: CalendarEventView, viewerTimeZone: string) {
   }).format(new Date(event.startAt));
 }
 
-function formatLongDate(event: CalendarEventView) {
+function formatLongDate(event: CalendarEventView, viewerTimeZone: string) {
+  if (!event.allDay && event.startAt) {
+    return new Intl.DateTimeFormat('en-SG', {
+      weekday: 'long',
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+      timeZone: viewerTimeZone,
+    }).format(new Date(event.startAt));
+  }
   const [year, month, day] = event.eventDate.split('-').map(Number);
   return new Intl.DateTimeFormat('en-SG', {
     weekday: 'long',
@@ -118,7 +138,7 @@ export default function Home() {
   const [viewerTimeZone, setViewerTimeZone] = useState('UTC');
   const [todayKey, setTodayKey] = useState<string | null>(null);
 
-  const range = useMemo(() => monthRange(activeMonth), [activeMonth]);
+  const range = useMemo(() => calendarRange(activeMonth), [activeMonth]);
   const sources = useMemo(
     () => Array.from(new Set(events.map((event) => event.sourceLabel).filter((value): value is string => Boolean(value)))).sort(),
     [events],
@@ -184,10 +204,11 @@ export default function Home() {
   const days = useMemo(() => calendarDays(activeMonth), [activeMonth]);
   const eventsByDay = useMemo(() => {
     return visibleEvents.reduce<Record<string, CalendarEventView[]>>((groups, event) => {
-      (groups[event.eventDate] ??= []).push(event);
+      const dateKey = eventDisplayDateKey(event, viewerTimeZone);
+      (groups[dateKey] ??= []).push(event);
       return groups;
     }, {});
-  }, [visibleEvents]);
+  }, [viewerTimeZone, visibleEvents]);
 
   const reviewEvents = events.filter((event) => event.status === 'unconfirmed');
   const selectedEvent = events.find((event) => event.id === selectedEventId) ?? null;
@@ -495,7 +516,9 @@ export default function Home() {
 
             {reviewEvents.length > 0 ? (
               <div className="review-list">
-                {reviewEvents.map((event) => (
+                {reviewEvents.map((event) => {
+                  const displayDate = eventDisplayDateKey(event, viewerTimeZone);
+                  return (
                   <button
                     type="button"
                     className={`review-list-item ${selectedEventId === event.id ? 'selected' : ''}`}
@@ -503,9 +526,9 @@ export default function Home() {
                     onClick={() => setSelectedEventId(event.id)}
                   >
                     <span className="review-date">
-                      <strong>{event.eventDate.slice(8)}</strong>
+                      <strong>{displayDate.slice(8)}</strong>
                       {new Intl.DateTimeFormat('en-SG', { month: 'short' })
-                        .format(new Date(`${event.eventDate}T12:00:00`)).toUpperCase()}
+                        .format(new Date(`${displayDate}T12:00:00`)).toUpperCase()}
                     </span>
                     <span className="review-summary">
                       <strong>{event.title}</strong>
@@ -513,7 +536,8 @@ export default function Home() {
                     </span>
                     <span className="chevron" aria-hidden="true">›</span>
                   </button>
-                ))}
+                  );
+                })}
               </div>
             ) : (
               <div className="empty-review">
@@ -535,7 +559,7 @@ export default function Home() {
                   <div>
                     <dt><span aria-hidden="true">◷</span><span className="sr-only">When</span></dt>
                     <dd>
-                      <strong>{formatLongDate(selectedEvent)}</strong>
+                      <strong>{formatLongDate(selectedEvent, viewerTimeZone)}</strong>
                       <span>{formatTime(selectedEvent, viewerTimeZone)} · {viewerTimeZone.replace('_', ' ')}</span>
                     </dd>
                   </div>

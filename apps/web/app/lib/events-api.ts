@@ -33,6 +33,40 @@ export interface PublicSnapshot {
   events: Omit<CalendarEventView, 'status'>[];
 }
 
+export function normalizePublicSnapshot(payload: unknown): PublicSnapshot {
+  if (!payload || typeof payload !== 'object') {
+    throw new Error('The snapshot response was not recognized.');
+  }
+  const candidate = payload as { title?: unknown; events?: unknown };
+  if (typeof candidate.title !== 'string' || !Array.isArray(candidate.events)) {
+    throw new Error('The snapshot response was not recognized.');
+  }
+
+  const events = candidate.events.flatMap((value) => {
+    if (!value || typeof value !== 'object') return [];
+    const event = value as Partial<CalendarEventView>;
+    if (typeof event.id !== 'string' || typeof event.title !== 'string' || typeof event.eventDate !== 'string') {
+      return [];
+    }
+    return [{
+      id: event.id,
+      title: event.title,
+      description: null,
+      startAt: typeof event.startAt === 'string' ? event.startAt : null,
+      endAt: typeof event.endAt === 'string' ? event.endAt : null,
+      eventDate: event.eventDate,
+      timezone: typeof event.timezone === 'string' ? event.timezone : null,
+      allDay: event.allDay === true,
+      locationName: typeof event.locationName === 'string' ? event.locationName : null,
+      address: typeof event.address === 'string' ? event.address : null,
+      rsvpUrl: typeof event.rsvpUrl === 'string' ? event.rsvpUrl : null,
+      sourceLabel: typeof event.sourceLabel === 'string' ? event.sourceLabel : null,
+    }];
+  });
+
+  return { title: candidate.title, events };
+}
+
 const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, '');
 
 export const isDemoMode = !apiBaseUrl;
@@ -144,12 +178,7 @@ export async function fetchPublicSnapshot(token: string): Promise<PublicSnapshot
     throw new Error(response.status === 404 ? 'Snapshot not found' : 'Could not load snapshot');
   }
 
-  const payload = (await response.json()) as Partial<PublicSnapshot>;
-  if (!payload.title || !Array.isArray(payload.events)) {
-    throw new Error('The snapshot response was not recognized.');
-  }
-
-  return { title: payload.title, events: payload.events };
+  return normalizePublicSnapshot(await response.json());
 }
 
 export function icsDownloadUrl(from: string, to: string) {
