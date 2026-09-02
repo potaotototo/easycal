@@ -89,7 +89,7 @@ beforeAll(async () => {
   };
 
   app = await buildServer(
-    loadEnv({ DATABASE_URL: database.connectionString, LOG_LEVEL: "fatal" }),
+    loadEnv({ DATABASE_URL: database.connectionString, LOG_LEVEL: "fatal", WEB_ORIGINS: "http://localhost:3001" }),
     context,
   );
 }, 120_000);
@@ -115,6 +115,36 @@ describe("authentication", () => {
       headers: auth("not-a-real-token"),
     });
     expect(response.statusCode).toBe(401);
+  });
+});
+
+describe("CORS", () => {
+  it("allows the configured web origin to send credentialed requests", async () => {
+    const response = await app.inject({
+      method: "OPTIONS",
+      url: "/v1/events",
+      headers: {
+        origin: "http://localhost:3001",
+        "access-control-request-method": "GET",
+        "access-control-request-headers": "authorization",
+      },
+    });
+
+    // Without these, apps/web cannot call the API from the browser at all.
+    expect(response.statusCode).toBeLessThan(300);
+    expect(response.headers["access-control-allow-origin"]).toBe("http://localhost:3001");
+    expect(response.headers["access-control-allow-credentials"]).toBe("true");
+    expect(String(response.headers["access-control-allow-headers"]).toLowerCase())
+      .toContain("authorization");
+  });
+
+  it("does not allow an unlisted origin", async () => {
+    const response = await app.inject({
+      method: "OPTIONS",
+      url: "/v1/events",
+      headers: { origin: "https://evil.example", "access-control-request-method": "GET" },
+    });
+    expect(response.headers["access-control-allow-origin"]).toBeUndefined();
   });
 });
 
@@ -393,7 +423,7 @@ describe("sharing", () => {
 });
 
 describe("PATCH /v1/events/:id", () => {
-  it("corrects a field", async () => {
+  it("corrects a field and returns the bare event object", async () => {
     const response = await app.inject({
       method: "PATCH",
       url: `/v1/events/${eventId}`,
@@ -401,17 +431,42 @@ describe("PATCH /v1/events/:id", () => {
       payload: { action: "correct", title: "NOC sharing (rescheduled)" },
     });
     expect(response.statusCode).toBe(200);
-    expect(response.json().event.title).toBe("NOC sharing (rescheduled)");
+    // apps/web reads the event directly, not wrapped in an envelope.
+    expect(response.json().title).toBe("NOC sharing (rescheduled)");
+    expect(response.json().status).toBe("confirmed");
   });
 
-  it("dismisses an event so it leaves the calendar", async () => {
+  it("accepts the { correction } body apps/web sends", async () => {
     const response = await app.inject({
       method: "PATCH",
       url: `/v1/events/${eventId}`,
       headers: auth(sessionToken),
-      payload: { action: "dismiss" },
+      payload: { correction: { title: "Corrected via web", locationName: "New venue" } },
     });
     expect(response.statusCode).toBe(200);
+    expect(response.json().title).toBe("Corrected via web");
+    expect(response.json().locationName).toBe("New venue");
+  });
+
+  it("rejects a correction that would violate the all-day rule", async () => {
+    const response = await app.inject({
+      method: "PATCH",
+      url: `/v1/events/${eventId}`,
+      headers: auth(sessionToken),
+      payload: { correction: { allDay: false, startAt: null } },
+    });
+    expect(response.statusCode).toBe(404);
+  });
+
+  it("accepts the { status: 'dismissed' } body apps/web sends", async () => {
+    const response = await app.inject({
+      method: "PATCH",
+      url: `/v1/events/${eventId}`,
+      headers: auth(sessionToken),
+      payload: { status: "dismissed" },
+    });
+    // 204 matches the frontend's `response.status === 204` short-circuit.
+    expect(response.statusCode).toBe(204);
 
     const events = await app.inject({
       method: "GET",

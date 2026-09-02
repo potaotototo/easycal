@@ -26,7 +26,15 @@ pnpm migrate                     # in another terminal
 pnpm --filter @easycal/api dev   # http://localhost:3000/health
 ```
 
-Copy `.env.example` to `.env` and fill it in. `pnpm build`, `pnpm typecheck`, and `pnpm test` all
+To run the web UI against it:
+
+```sh
+cd apps/web
+NEXT_PUBLIC_API_BASE_URL=http://localhost:3000 pnpm dev   # http://localhost:3001
+```
+
+Copy `.env.example` to `.env` and fill it in. `WEB_ORIGINS` must list the web app's
+origin, since the API and UI are served from different origins. `pnpm build`, `pnpm typecheck`, and `pnpm test` all
 run without a database. See [db/README.md](db/README.md) for database details.
 
 Read [the architecture](docs/architecture.md) and [the two-person work plan](docs/workstreams.md) before implementation.

@@ -15,6 +15,7 @@ export * from "./repositories/chats.js";
 export * from "./repositories/messages.js";
 export * from "./repositories/syncRuns.js";
 export * from "./repositories/events.js";
+export * from "./repositories/eventViews.js";
 export * from "./repositories/snapshots.js";
 export * from "./repositories/preferences.js";
 

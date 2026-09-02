@@ -1,3 +1,4 @@
+import cors from "@fastify/cors";
 import cookie from "@fastify/cookie";
 import { getPool } from "@easycal/db";
 import Fastify, { type FastifyInstance } from "fastify";
@@ -30,6 +31,15 @@ export async function buildServer(env: Env, context?: AppContext): Promise<Fasti
         remove: true,
       },
     },
+  });
+
+  // apps/web is served from a different origin (Cloudflare Workers), so the
+  // browser needs explicit permission before it will send credentialed requests.
+  await app.register(cors, {
+    origin: env.WEB_ORIGINS,
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: ["content-type", "authorization"],
   });
 
   await app.register(cookie);

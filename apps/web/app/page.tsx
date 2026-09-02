@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { demoEvents } from './lib/demo-events';
 import {
   correctEvent,
+  downloadIcs,
   fetchEvents,
   fetchPreferences,
   icsDownloadUrl,
@@ -22,6 +23,7 @@ import {
   type EventCategory,
   type UserPreferencesView,
 } from './lib/preferences';
+import { NotAuthenticatedError } from './lib/session';
 
 const weekdayLabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
@@ -180,6 +182,12 @@ export default function Home() {
         return nextEvents.find((event) => event.status === 'unconfirmed')?.id ?? null;
       });
     } catch (error) {
+      // An expired or missing session is not an error to display — it means the
+      // user needs to connect their Telegram account.
+      if (error instanceof NotAuthenticatedError) {
+        window.location.assign('/login');
+        return;
+      }
       setLoadError(error instanceof Error ? error.message : 'Could not load events.');
     } finally {
       setIsLoading(false);
@@ -545,10 +553,16 @@ export default function Home() {
             href={isDemoMode ? undefined : icsDownloadUrl(range.from, range.to)}
             aria-disabled={isDemoMode}
             onClick={(event) => {
+              event.preventDefault();
               if (isDemoMode) {
-                event.preventDefault();
                 setNotice('ICS export will activate when the API is connected.');
+                return;
               }
+              // The download must be fetched with the session header, so it cannot
+              // be a plain link navigation.
+              void downloadIcs(range.from, range.to).catch((error: unknown) => {
+                setNotice(error instanceof Error ? error.message : 'Could not export the calendar.');
+              });
             }}
           >
             <span className="download-icon" aria-hidden="true">↓</span>
