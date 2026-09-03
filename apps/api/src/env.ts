@@ -28,6 +28,31 @@ const schema = z.object({
 
 export type Env = z.infer<typeof schema>;
 
+/**
+ * Secrets are optional in development so `pnpm test` and a bare `/health` check can
+ * run without them. In production a missing one is a deployment mistake, and it is
+ * far better to refuse to start than to fail on the first user's login.
+ */
+const REQUIRED_IN_PRODUCTION = [
+  "TELEGRAM_API_ID",
+  "TELEGRAM_API_HASH",
+  "SESSION_ENCRYPTION_KEY",
+  "APP_SESSION_SECRET",
+] as const;
+
+function assertProductionConfig(env: Env, nodeEnv: string | undefined): void {
+  if (nodeEnv !== "production") return;
+  const missing = REQUIRED_IN_PRODUCTION.filter((key) => env[key] === undefined);
+  if (missing.length > 0) {
+    throw new Error(
+      `Missing required production configuration: ${missing.join(", ")}. See .env.example.`,
+    );
+  }
+  if (env.WEB_ORIGINS.length === 0) {
+    throw new Error("WEB_ORIGINS must list the web app's origin in production.");
+  }
+}
+
 export function loadEnv(source: NodeJS.ProcessEnv = process.env): Env {
   const parsed = schema.safeParse(source);
   if (!parsed.success) {
@@ -36,5 +61,6 @@ export function loadEnv(source: NodeJS.ProcessEnv = process.env): Env {
       .join("\n");
     throw new Error(`Invalid environment (see .env.example):\n${issues}`);
   }
+  assertProductionConfig(parsed.data, source["NODE_ENV"]);
   return parsed.data;
 }

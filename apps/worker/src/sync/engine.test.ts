@@ -2,10 +2,9 @@ import {
   EnvKeyProvider,
   saveConnection,
   saveFolderSelection,
-  startTestDatabase,
   upsertUserByTelegramId,
-  type TestDatabase,
 } from "@easycal/db";
+import { startTestDatabase, type TestDatabase } from "@easycal/db/testing";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { CHAT_START_IT, fakeTelegramData, SYNC_NOW } from "../__fixtures__/messages.js";
 import { RealEventParser } from "../parser/real.js";

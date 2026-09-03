@@ -8,10 +8,9 @@ import {
   revokeSnapshot,
   saveConnection,
   saveFolderSelection,
-  startTestDatabase,
   upsertUserByTelegramId,
-  type TestDatabase,
 } from "@easycal/db";
+import { startTestDatabase, type TestDatabase } from "@easycal/db/testing";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
   CHAT_CAREERS,

@@ -22,6 +22,26 @@ const schema = z.object({
 
 export type Env = z.infer<typeof schema>;
 
+/**
+ * The worker cannot do anything useful without these: it decrypts stored Telegram
+ * sessions and calls Telegram directly. Fail at boot rather than on the first run.
+ */
+const REQUIRED_IN_PRODUCTION = [
+  "TELEGRAM_API_ID",
+  "TELEGRAM_API_HASH",
+  "SESSION_ENCRYPTION_KEY",
+] as const;
+
+function assertProductionConfig(env: Env, nodeEnv: string | undefined): void {
+  if (nodeEnv !== "production") return;
+  const missing = REQUIRED_IN_PRODUCTION.filter((key) => env[key] === undefined);
+  if (missing.length > 0) {
+    throw new Error(
+      `Missing required production configuration: ${missing.join(", ")}. See .env.example.`,
+    );
+  }
+}
+
 export function loadEnv(source: NodeJS.ProcessEnv = process.env): Env {
   const parsed = schema.safeParse(source);
   if (!parsed.success) {
@@ -30,5 +50,6 @@ export function loadEnv(source: NodeJS.ProcessEnv = process.env): Env {
       .join("\n");
     throw new Error(`Invalid environment (see .env.example):\n${issues}`);
   }
+  assertProductionConfig(parsed.data, source["NODE_ENV"]);
   return parsed.data;
 }

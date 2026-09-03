@@ -1,9 +1,8 @@
 import {
   EnvKeyProvider,
   encryptOnly,
-  startTestDatabase,
-  type TestDatabase,
 } from "@easycal/db";
+import { startTestDatabase, type TestDatabase } from "@easycal/db/testing";
 import { LoginAttemptStore } from "@easycal/worker/telegram/login";
 import type { LoginCapableClient, LoginClientFactory } from "@easycal/worker/telegram/login";
 import type { FastifyInstance } from "fastify";

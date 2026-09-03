@@ -19,6 +19,6 @@ export * from "./repositories/eventViews.js";
 export * from "./repositories/snapshots.js";
 export * from "./repositories/preferences.js";
 
-// Test-only helper; imported by suites, never by the running services.
-export { startTestDatabase, applyMigrations } from "./testing.js";
-export type { TestDatabase } from "./testing.js";
+// The test harness lives at "@easycal/db/testing" on purpose. It imports
+// embedded-postgres, which is a devDependency, so re-exporting it here would make
+// a production install of this package fail to load at all.

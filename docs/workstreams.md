@@ -1,47 +1,73 @@
+# Work plan
 
-# Two-person work plan
+EasyCal is developed solo. This file tracks what is built, what is left, and the
+conventions worth keeping now that there is no second person to coordinate with.
 
-## Shared rule
+Earlier versions of this file split the repository between two people. That split is
+gone: every directory has the same owner, and `packages/contracts` and `fixtures` no
+longer need a review handshake before they change.
 
-Agree on `packages/contracts` and `fixtures` before changing implementation. Each person owns their directories; avoid drive-by edits to the other person's work. Contract changes should be reviewed together because they affect every component.
+## Status
 
-## Person A — Telegram, API, persistence
+| Area | State |
+| --- | --- |
+| PostgreSQL schema and migrations | Done |
+| Telegram authorization, encrypted session storage | Done, never run against real Telegram |
+| Folder listing, dynamic-folder resolution, sync scheduling, cursors, deduplication, rate-limit handling | Done, exercised against a fake Telegram |
+| Raw message persistence, parser invoked through the contract boundary | Done, running the real parser |
+| Private event queries, snapshot create/revoke, ICS generation | Done |
+| Message normalization, chain assembly, deterministic extraction | Done |
+| Structured-model fallback validated before it can create an event | Done |
+| Category classification and preference filtering | Done |
+| Calendar UI: filters, event detail, correct/dismiss, ICS download | Done |
+| Public read-only snapshot view | Done |
+| Deployment | **Not started** |
+| Live Telegram verification | **Not done** |
 
-Owns: `apps/api`, `apps/worker`, `db`, `infra`.
+## What is actually left
 
-1. Set up PostgreSQL migrations from `db/schema.sql`.
-2. Implement Telegram user-account authorization and encrypted connection storage.
-3. Implement folder listing, dynamic-folder resolution, sync scheduling, cursors, deduplication, and retry/rate-limit handling.
-4. Persist raw messages and invoke the parser through the contract boundary.
-5. Implement private event queries, snapshot creation/revocation, and ICS generation.
+1. **Deploy.** Postgres, the API, and the worker need somewhere to run, migrations
+   need to be applied there, and the web app needs to point at the deployed API.
+   See [deployment.md](deployment.md).
+2. **Run against real Telegram.** No Telegram-facing code has ever talked to
+   Telegram. See [live-smoke-test.md](live-smoke-test.md). Folder resolution is the
+   highest-risk part: it reimplements Telegram's filter semantics and a fake cannot
+   validate it.
 
-Acceptance check: after choosing a folder, a test connection can sync fixture-equivalent messages, persist events, export ICS, and return a public snapshot with no raw-message content.
+## Conventions worth keeping
 
-## Person B — Event parsing and calendar UI
+- **`packages/contracts` is still the seam.** The API, worker, parser and web app all
+  depend on those types. Changing a field there is still a change to four things at
+  once, even with one person making it.
+- **`toPublicPayload` is the only path to public data.** It is an explicit allowlist,
+  not a spread, so a new column cannot leak into a share link by accident.
+  `publicPayload.test.ts` enforces this.
+- **Only the worker decrypts Telegram sessions.** The API is handed an encrypt-only
+  key provider. Keep that split; it is why a compromised API cannot read sessions.
+- **The parser is reached through `EventParser`** (`apps/worker/src/parser/contract.ts`),
+  adapted in `parser/real.ts`. The sync engine does not know the parser's shape.
+- **Telegram is reached through `TelegramPort`.** Every test and the acceptance check
+  run against `FakeTelegramPort`, which is why the suite needs no network, no Docker
+  and no Telegram account.
 
-Owns: `packages/event-parser`, `apps/web`, `fixtures`.
+## Verification
 
-1. Build normalizer that preserves Telegram link entities while producing readable text.
-2. Implement chain assembly and deterministic event extraction.
-3. Add structured-model fallback with the `EventCandidate` contract; validate output before it can create a `CalendarEvent`.
-4. Build private filters, event detail, correction/dismiss UI, and ICS download controls.
-5. Build public read-only snapshot view; do not render private evidence.
+```sh
+pnpm db                  # embedded Postgres, foreground
+pnpm migrate
+pnpm test                # backend suites
+pnpm --filter @easycal/event-parser test
+pnpm --filter @easycal/web test
+```
 
-Acceptance check: the NOC fixture produces one high-confidence timed event with the correct RSVP URL; a date-only fixture creates an all-day event; no-date fixtures remain unconfirmed.
+The acceptance check lives in `apps/worker/src/sync/acceptance.test.ts`: choose a
+folder, sync fixture-equivalent messages, persist events, export ICS, and return a
+public snapshot containing no raw-message content.
 
-## Integration milestones
-
-| Milestone | Person A deliverable | Person B deliverable |
-| --- | --- | --- |
-| 1. Contract freeze | database adapter accepts contract objects | fixture inputs/expected outputs accepted |
-| 2. Vertical slice | worker calls parser and persists result | parser produces candidate from fixture |
-| 3. Calendar | `GET /v1/events` and ICS endpoint | private filter/calendar view |
-| 4. Sharing | immutable snapshot API | public snapshot view |
-
-## Explicit non-goals for v1
+## Out of scope for v1
 
 - Natural-language calendar queries.
 - Non-English extraction.
 - Syncing full Telegram history.
 - Mutable or authenticated public sharing.
-- Automatically creating Telegram posts or messages.
+- Posting to Telegram.

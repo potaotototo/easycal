@@ -1,0 +1,13 @@
+{
+  // Solution file: `tsc -b tsconfig.build.json` builds every backend project in
+  // dependency order, using TypeScript's own project-reference graph rather than
+  // relying on the package manager to sort the packages for us.
+  "files": [],
+  "references": [
+    { "path": "./packages/contracts" },
+    { "path": "./packages/event-parser" },
+    { "path": "./db" },
+    { "path": "./apps/api" },
+    { "path": "./apps/worker" }
+  ]
+}

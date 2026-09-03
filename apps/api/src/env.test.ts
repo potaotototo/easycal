@@ -30,3 +30,28 @@ describe("optional Telegram settings", () => {
     expect(loadEnv({ ...base, TELEGRAM_API_ID: "12345" }).TELEGRAM_API_ID).toBe(12345);
   });
 });
+
+describe("production configuration", () => {
+  const production = { ...base, NODE_ENV: "production" };
+
+  it("refuses to start without the secrets it needs", () => {
+    expect(() => loadEnv(production)).toThrow(/Missing required production configuration/);
+    expect(() => loadEnv(production)).toThrow(/SESSION_ENCRYPTION_KEY/);
+  });
+
+  it("starts when every secret is present", () => {
+    const env = loadEnv({
+      ...production,
+      TELEGRAM_API_ID: "1234",
+      TELEGRAM_API_HASH: "hash",
+      SESSION_ENCRYPTION_KEY: "key",
+      APP_SESSION_SECRET: "secret",
+      WEB_ORIGINS: "https://easycal.example",
+    });
+    expect(env.WEB_ORIGINS).toEqual(["https://easycal.example"]);
+  });
+
+  it("still allows a bare development config", () => {
+    expect(() => loadEnv(base)).not.toThrow();
+  });
+});

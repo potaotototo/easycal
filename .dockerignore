@@ -1,0 +1,25 @@
+node_modules
+**/node_modules
+dist
+**/dist
+
+# Incremental build state MUST be excluded. If a host .tsbuildinfo reaches the
+# image, `tsc -b` believes the project is already built, skips emitting, and the
+# image ends up with no dist/ at all. The `**/` prefix matters: a bare
+# `*.tsbuildinfo` only matches the context root.
+*.tsbuildinfo
+**/*.tsbuildinfo
+
+db/.pgdata
+.git
+.github
+.env
+.env.*
+!.env.example
+coverage
+*.log
+**/*.log
+apps/web/.next
+apps/web/.wrangler
+apps/web/dist
+docs

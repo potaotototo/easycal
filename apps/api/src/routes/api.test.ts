@@ -5,11 +5,10 @@ import {
   saveConnection,
   saveFolderCache,
   saveFolderSelection,
-  startTestDatabase,
   upsertCalendarEvent,
   upsertUserByTelegramId,
-  type TestDatabase,
 } from "@easycal/db";
+import { startTestDatabase, type TestDatabase } from "@easycal/db/testing";
 import { randomUUID } from "node:crypto";
 import type { FastifyInstance } from "fastify";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";

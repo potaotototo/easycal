@@ -8,7 +8,7 @@
     "node": ">=22"
   },
   "scripts": {
-    "build": "pnpm -r build",
+    "build": "tsc -b tsconfig.build.json",
     "typecheck": "pnpm -r typecheck",
     "test": "vitest run",
     "test:watch": "vitest",
@@ -17,7 +17,8 @@
     "db": "pnpm --filter @easycal/db dev-server",
     "db:reset": "pnpm --filter @easycal/db dev-server:reset",
     "db:docker": "docker compose -f infra/docker-compose.yml up -d --wait postgres",
-    "db:docker:down": "docker compose -f infra/docker-compose.yml down"
+    "db:docker:down": "docker compose -f infra/docker-compose.yml down",
+    "build:clean": "tsc -b tsconfig.build.json --clean"
   },
   "devDependencies": {
     "@types/node": "^22.10.2",
