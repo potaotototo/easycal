@@ -19,7 +19,7 @@ import {
   fakeTelegramData,
   SYNC_NOW,
 } from "../__fixtures__/messages.js";
-import { StubEventParser } from "../parser/stub.js";
+import { RealEventParser } from "../parser/real.js";
 import { FakeTelegramPort } from "../telegram/fake.js";
 import { runSyncForConnection } from "./engine.js";
 import { DeterministicEventCategoryClassifier } from "../classification/classifier.js";
@@ -76,7 +76,7 @@ function sync() {
     {
       db: database.pool,
       telegram,
-      parser: new StubEventParser(),
+      parser: new RealEventParser(),
       classifier: new DeterministicEventCategoryClassifier(),
       overlapHours: 24,
       now: () => SYNC_NOW,

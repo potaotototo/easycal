@@ -1,4 +1,4 @@
-import type { EventCandidate, MessageEvidence } from "../../contracts/src/event.js";
+import type { EventCandidate, MessageEvidence } from "@easycal/contracts/event";
 import type { ParserOptions, StructuredModelFallback } from "./types.js";
 import { addDays, isValidTimeZone, zonedDateTimeToInstant } from "./datetime.js";
 import { validateStructuredCandidate } from "./validate.js";

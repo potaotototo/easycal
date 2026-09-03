@@ -1,4 +1,4 @@
-import type { LinkEntity, MessageEvidence } from "../../contracts/src/event.js";
+import type { LinkEntity, MessageEvidence } from "@easycal/contracts/event";
 import type { RawTelegramMessage } from "./types.js";
 
 const SAFE_URL = /^https?:\/\//i;

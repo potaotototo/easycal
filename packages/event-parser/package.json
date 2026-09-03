@@ -3,14 +3,31 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "exports": "./src/index.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./*": {
+      "types": "./dist/*.d.ts",
+      "default": "./dist/*.js"
+    }
+  },
   "scripts": {
-    "check": "tsc --noEmit",
-    "test": "node --import tsx --test test/**/*.test.ts"
+    "check": "tsc --noEmit -p tsconfig.check.json",
+    "test": "node --import tsx --test test/**/*.test.ts",
+    "build": "tsc -b",
+    "typecheck": "tsc --noEmit -p tsconfig.check.json"
   },
   "devDependencies": {
     "@types/node": "^22.19.19",
     "tsx": "^4.20.6",
     "typescript": "^5.9.3"
+  },
+  "files": [
+    "dist"
+  ],
+  "dependencies": {
+    "@easycal/contracts": "workspace:*"
   }
 }

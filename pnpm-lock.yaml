@@ -117,6 +117,9 @@ importers:
       '@easycal/db':
         specifier: workspace:*
         version: link:../../db
+      '@easycal/event-parser':
+        specifier: workspace:*
+        version: link:../../packages/event-parser
       telegram:
         specifier: ^2.26.22
         version: 2.26.22(supports-color@10.2.2)
@@ -149,6 +152,10 @@ importers:
   packages/contracts: {}
 
   packages/event-parser:
+    dependencies:
+      '@easycal/contracts':
+        specifier: workspace:*
+        version: link:../contracts
     devDependencies:
       '@types/node':
         specifier: ^22.19.19

@@ -202,6 +202,7 @@ test("calendar conversion rejects invalid timezones on all-day candidates", () =
     address: null,
     rsvpUrl: null,
     directionsChannel: null,
+    categories: [],
     evidence: [],
     reviewReasons: [],
   }), /timezone/i);

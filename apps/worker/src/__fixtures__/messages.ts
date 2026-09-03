@@ -28,8 +28,12 @@ export const NOC_MESSAGE = {
   sentAt: SENT_AT,
   rawText: [
     "NOC sharing",
-    "📅 2 Sep, 4pm - 6pm",
-    "📍 NUS Enterprise I3 MPH, Level 2, 21 Heng Mui Keng Terrace, Singapore 119613",
+    "📅 2 Sep",
+    "⏰ 4:00pm – 6:00pm",
+    // Venue and street address on separate lines, matching the real-world shape in
+    // fixtures/noc-sharing.input.json.
+    "📍 NUS Enterprise I3 MPH, Level 2",
+    "21 Heng Mui Keng Terrace, Singapore 119613",
     "RSVP here",
     "Follow @nusstartit for directions",
   ].join("\n"),

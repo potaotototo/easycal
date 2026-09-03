@@ -1,4 +1,4 @@
-import type { MessageEvidence } from "../../contracts/src/event.js";
+import type { MessageEvidence } from "@easycal/contracts/event";
 import { normalizeTelegramMessage } from "./normalizer.js";
 import type { RawTelegramMessage } from "./types.js";
 

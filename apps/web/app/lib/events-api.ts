@@ -149,6 +149,20 @@ export async function fetchEvents(from: string, to: string) {
   });
 }
 
+/**
+ * The API returns the updated event directly. Older builds wrapped it in
+ * `{ event }`, so both are unwrapped here — with a real type guard, because
+ * `'event' in payload` does not narrow an optional property.
+ */
+function unwrapEvent(
+  payload: CalendarEventView | { event?: CalendarEventView },
+): CalendarEventView | null {
+  if (payload && typeof payload === 'object' && 'id' in payload) {
+    return payload as CalendarEventView;
+  }
+  return (payload as { event?: CalendarEventView }).event ?? null;
+}
+
 export async function updateEventStatus(
   id: string,
   status: Extract<EventReviewStatus, 'confirmed' | 'dismissed'>,
@@ -175,7 +189,7 @@ export async function updateEventStatus(
   }
 
   const payload = await response.json() as CalendarEventView | { event?: CalendarEventView };
-  const event = 'event' in payload ? payload.event : payload;
+  const event = unwrapEvent(payload);
   return event ? normalizeEvent(event) : null;
 }
 
@@ -208,7 +222,7 @@ export async function correctEvent(id: string, correction: EventCorrection) {
   }
 
   const payload = await response.json() as CalendarEventView | { event?: CalendarEventView };
-  const event = 'event' in payload ? payload.event : payload;
+  const event = unwrapEvent(payload);
   const normalized = event ? normalizeEvent(event) : null;
   if (!normalized) throw new Error('The updated event response was not recognized.');
   return normalized;

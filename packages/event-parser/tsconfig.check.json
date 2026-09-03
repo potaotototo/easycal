@@ -1,0 +1,13 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    // Typechecks the tests too. Emits nothing, so it widens rootDir past src/
+    // and drops the build-only settings.
+    "composite": false,
+    "noEmit": true,
+    "declaration": false,
+    "declarationMap": false,
+    "rootDir": "."
+  },
+  "include": ["src/**/*.ts", "test/**/*.ts"]
+}

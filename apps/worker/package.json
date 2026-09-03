@@ -12,6 +12,7 @@
   "dependencies": {
     "@easycal/contracts": "workspace:*",
     "@easycal/db": "workspace:*",
+    "@easycal/event-parser": "workspace:*",
     "telegram": "^2.26.22",
     "zod": "^3.24.1"
   },

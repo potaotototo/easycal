@@ -1,4 +1,4 @@
-import type { CalendarEvent, EventCandidate, MessageEvidence } from "../../contracts/src/event.js";
+import type { CalendarEvent, EventCandidate, MessageEvidence } from "@easycal/contracts/event";
 import { dateInTimeZone, isValidDateOnly, isValidTimeZone } from "./datetime.js";
 
 function isRecord(value: unknown): value is Record<string, unknown> {

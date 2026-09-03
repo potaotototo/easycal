@@ -20,24 +20,25 @@ Telegram is reached through a `TelegramPort` interface with two implementations:
 client, and a `FakeTelegramPort` seeded from `fixtures/`. Tests and the acceptance check run
 against the fake, so no live Telegram account is needed to verify the pipeline.
 
-## Swapping in the real parser
+## The parser
 
 The worker depends only on the `EventParser` interface in `src/parser/contract.ts`, never on an
-implementation. `StubEventParser` stands in until Person B ships `packages/event-parser`;
-replacing it is one line in `src/index.ts`.
+implementation. `src/parser/real.ts` adapts Person B's `@easycal/event-parser` to it: the worker
+assembles chains itself while walking a chat, so it calls `parseEvent` with the evidence directly
+rather than using the parser's own `assembleMessageChain`.
 
-Two things to agree with Person B before that swap:
+Two things still worth agreeing with Person B:
 
 1. **Move the interface into `packages/contracts/src/parser.ts`.** It lives in the worker only
    because `packages/contracts` is shared and changes there are reviewed jointly.
-2. **`description` is published.** `ShareSnapshotEvent` extends `CalendarEvent`, so whatever the
-   parser writes into `description` appears in public share links. It must be a summary the
-   parser authored — never the message body, which is private evidence. The stub sets it to
-   `null` for exactly this reason, and `publicPayload.test.ts` guards the boundary.
+2. **`description` is published.** `ShareSnapshotEvent` derives from `CalendarEvent`, so whatever
+   the parser writes into `description` appears in public share links. It must be a summary the
+   parser authored — never the message body, which is private evidence. `publicPayload.test.ts`
+   guards the boundary.
 
-`src/__fixtures__/messages.ts` is a stand-in for `fixtures/noc-sharing.input.json`, which Person
-B owns and has not shipped (only the expected output exists). Delete it once the shared fixture
-lands.
+`src/__fixtures__/messages.ts` drives the sync tests with several chats and a reply chain, which
+the single-message `fixtures/noc-sharing.input.json` does not cover. Its message text is kept in
+the same shape as the shared fixture.
 
 ## Scheduling
 

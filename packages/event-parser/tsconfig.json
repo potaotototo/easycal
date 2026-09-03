@@ -7,8 +7,14 @@
     "noUncheckedIndexedAccess": true,
     "exactOptionalPropertyTypes": true,
     "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
+    "composite": true,
     "skipLibCheck": true,
-    "types": ["node"]
+    "types": ["node"],
+    "rootDir": "./src",
+    "outDir": "./dist"
   },
-  "include": ["src/**/*.ts", "test/**/*.ts"]
+  "include": ["src/**/*.ts"],
+  "references": [{ "path": "../contracts" }]
 }

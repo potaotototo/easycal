@@ -111,8 +111,9 @@ curl -s "localhost:3000/v1/events" -H "authorization: Bearer $TOKEN"
 - [ ] An RSVP link posted as a Telegram link entity ("sign up here") is captured as a URL —
       this exercises `extractLinkEntities`, which the fake supplies pre-built.
 
-Remember the parser is still `StubEventParser`. Poor extraction quality here is expected and is
-Person B's work; what you are checking is that **text, entities and timestamps arrive intact**.
+The worker now runs Person B's real parser (`packages/event-parser`), so extraction
+quality is worth judging here. What matters most is that **text, entities and timestamps
+arrive intact** — the parser is already covered by its own tests against the fixtures.
 
 ## 6. ICS
 

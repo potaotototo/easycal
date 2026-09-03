@@ -9,7 +9,7 @@ import {
   loadSessionString,
   saveFolderCache,
 } from "@easycal/db";
-import { StubEventParser } from "./parser/stub.js";
+import { RealEventParser } from "./parser/real.js";
 import { runSyncForConnection } from "./sync/engine.js";
 import { createClient, GramJsTelegramPort } from "./telegram/gramjs.js";
 import { loadEnv } from "./env.js";
@@ -27,7 +27,7 @@ import { createEventCategoryClassifier } from "./classification/classifier.js";
 
 const env = loadEnv();
 const db = getPool();
-const parser = new StubEventParser(); // swap for Person B's parser at milestone 2
+const parser = new RealEventParser();
 const classifier = createEventCategoryClassifier({
   apiKey: env.OPENAI_API_KEY,
   model: env.OPENAI_CATEGORY_MODEL,

@@ -22,5 +22,5 @@ export interface ParserOptions {
 }
 
 export type StructuredModelFallback = (input: {
-  evidence: import("../../contracts/src/event.js").MessageEvidence[];
+  evidence: import("@easycal/contracts/event").MessageEvidence[];
 }) => Promise<unknown>;
