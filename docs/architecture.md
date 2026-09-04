@@ -22,7 +22,11 @@ Browser / ChatGPT Site UI
 
 ### API service
 
-- Handles application authentication and Telegram-connection onboarding.
+- Handles application authentication and Telegram-connection onboarding. Two sign-in
+  methods: QR (the default — scanned from a device already signed in, as Telegram Web
+  does) and phone number plus code. Both end in the same encrypted connection and app
+  session, and both still require `TELEGRAM_API_ID`/`TELEGRAM_API_HASH`, which
+  identify the *application*, not the user.
 - Returns a user's calendar, filter results, event details, and ICS files.
 - Creates, revokes, and serves immutable public snapshot links.
 - Does not hold an unencrypted Telegram session in request logs or browser responses.
@@ -87,7 +91,10 @@ The detailed shared payload shapes are in `packages/contracts/src/event.ts`. Cur
 
 | Endpoint | Purpose |
 | --- | --- |
-| `POST /v1/auth/telegram/start` | Begin authorization; returns an attempt id, never session secrets. |
+| `POST /v1/auth/telegram/qr` | Begin QR authorization; returns an attempt id and a code to scan. |
+| `GET /v1/auth/telegram/qr/:attemptId` | Poll a QR attempt: refreshed code, 2FA prompt, or the issued session. |
+| `POST /v1/auth/telegram/qr/:attemptId/password` | Supply the 2FA password after a scan. |
+| `POST /v1/auth/telegram/start` | Begin phone authorization; returns an attempt id, never session secrets. |
 | `POST /v1/auth/telegram/verify` | Code plus optional 2FA password; creates the user and issues a session. |
 | `POST /v1/auth/logout` | Revoke the current session. |
 | `GET /v1/me` | Current user and Telegram connection status. |

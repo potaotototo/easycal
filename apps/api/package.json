@@ -16,6 +16,10 @@
     "@fastify/cookie": "^11.1.2",
     "@fastify/cors": "^11.3.0",
     "fastify": "^5.2.0",
+    "qrcode": "^1.5.4",
     "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "@types/qrcode": "^1.5.6"
   }
 }

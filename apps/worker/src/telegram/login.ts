@@ -168,15 +168,22 @@ export class LoginAttempt {
 }
 
 /** Short-lived, in-memory store of in-flight logins, swept on every access. */
-export class LoginAttemptStore {
-  readonly #attempts = new Map<string, LoginAttempt>();
+/** What the store needs of an attempt, so it can hold phone and QR alike. */
+export interface ExpirableAttempt {
+  readonly id: string;
+  readonly expired: boolean;
+  dispose(): Promise<void>;
+}
 
-  add(attempt: LoginAttempt): void {
+export class LoginAttemptStore<T extends ExpirableAttempt = LoginAttempt> {
+  readonly #attempts = new Map<string, T>();
+
+  add(attempt: T): void {
     this.sweep();
     this.#attempts.set(attempt.id, attempt);
   }
 
-  get(id: string): LoginAttempt | undefined {
+  get(id: string): T | undefined {
     this.sweep();
     return this.#attempts.get(id);
   }

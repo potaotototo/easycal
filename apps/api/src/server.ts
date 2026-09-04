@@ -5,6 +5,7 @@ import Fastify, { type FastifyInstance } from "fastify";
 import { buildContext, type AppContext } from "./context.js";
 import type { Env } from "./env.js";
 import { registerAuthRoutes } from "./routes/auth.js";
+import { registerQrAuthRoutes } from "./routes/qrAuth.js";
 import { registerEventRoutes } from "./routes/events.js";
 import { registerFolderRoutes } from "./routes/folders.js";
 import { registerSnapshotRoutes } from "./routes/snapshots.js";
@@ -52,6 +53,7 @@ export async function buildServer(env: Env, context?: AppContext): Promise<Fasti
   });
 
   registerAuthRoutes(app, appContext);
+  registerQrAuthRoutes(app, appContext);
   registerFolderRoutes(app, appContext);
   registerEventRoutes(app, appContext);
   registerSnapshotRoutes(app, appContext);

@@ -96,7 +96,7 @@ export function registerAuthRoutes(app: FastifyInstance, context: AppContext): v
 
     // The API cannot decrypt this session later, so cache the folder list now,
     // while a live authenticated client is still in hand.
-    const cache = context.cacheFolders ?? ((id, session) => cacheFolders(context, id, session));
+    const cache = context.cacheFolders ?? ((id, session) => cacheFoldersForConnection(context, id, session));
     await cache(connection.id, sessionString).catch((error: unknown) => {
       request.log.warn({ err: error }, "could not cache folders after login");
     });
@@ -142,7 +142,7 @@ export function registerAuthRoutes(app: FastifyInstance, context: AppContext): v
 /** Timezone is supplied at /start but only needed at /verify. */
 const deviceTimezones = new Map<string, string | undefined>();
 
-async function cacheFolders(
+export async function cacheFoldersForConnection(
   context: AppContext,
   connectionId: string,
   sessionString: string,

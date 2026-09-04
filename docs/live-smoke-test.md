@@ -35,6 +35,8 @@ NEXT_PUBLIC_API_BASE_URL=http://localhost:3000 pnpm dev   # terminal 4
 ```
 
 Open <http://localhost:3001/login> and sign in there instead of using curl below.
+The default method is **QR**: scan the code from Telegram → Settings → Devices →
+Link Desktop Device. The phone flow is the fallback tab if you have no second device.
 The app stores the returned session token and sends it as a bearer header; it is a
 different origin from the API, so `WEB_ORIGINS` in `.env` must list it (it defaults
 to `http://localhost:3001`).

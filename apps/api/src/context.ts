@@ -1,6 +1,10 @@
 import { EnvKeyProvider, encryptOnly, getPool, type KeyProvider, type Pool } from "@easycal/db";
 import { LoginAttemptStore } from "@easycal/worker/telegram/login";
 import type { LoginClientFactory } from "@easycal/worker/telegram/login";
+import type {
+  QrLoginAttempt,
+  QrLoginClientFactory,
+} from "@easycal/worker/telegram/qrLogin";
 import type { GramJsCredentials } from "@easycal/worker/telegram/gramjs";
 import type { Env } from "./env.js";
 
@@ -13,11 +17,13 @@ export interface AppContext {
   keys: Pick<KeyProvider, "encrypt">;
   telegram: GramJsCredentials | null;
   loginAttempts: LoginAttemptStore;
+  qrLoginAttempts: LoginAttemptStore<QrLoginAttempt>;
   /**
    * Seams for tests, so the auth routes can be exercised without reaching Telegram.
    * Both default to the real implementations in production.
    */
   createLoginClient?: LoginClientFactory;
+  createQrLoginClient?: QrLoginClientFactory;
   cacheFolders?: (connectionId: string, sessionString: string) => Promise<void>;
 }
 
@@ -32,6 +38,7 @@ export function buildContext(env: Env): AppContext {
         ? { apiId: env.TELEGRAM_API_ID, apiHash: env.TELEGRAM_API_HASH }
         : null,
     loginAttempts: new LoginAttemptStore(),
+    qrLoginAttempts: new LoginAttemptStore<QrLoginAttempt>(),
   };
 }
 
