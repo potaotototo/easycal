@@ -55,3 +55,19 @@ describe("production configuration", () => {
     expect(() => loadEnv(base)).not.toThrow();
   });
 });
+
+describe("WEB_ORIGINS", () => {
+  it("treats a blank value as unset rather than an empty allowlist", () => {
+    // A `WEB_ORIGINS=` line left in .env must not silently block every browser call.
+    expect(loadEnv({ ...base, WEB_ORIGINS: "" }).WEB_ORIGINS).toEqual([
+      "http://localhost:3001",
+      "http://localhost:5173",
+    ]);
+  });
+
+  it("splits and trims a configured list", () => {
+    expect(
+      loadEnv({ ...base, WEB_ORIGINS: "https://a.example, https://b.example" }).WEB_ORIGINS,
+    ).toEqual(["https://a.example", "https://b.example"]);
+  });
+});

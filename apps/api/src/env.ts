@@ -14,10 +14,16 @@ const schema = z.object({
    * Comma-separated browser origins allowed to call the API with credentials.
    * apps/web deploys to Cloudflare Workers, so it is always a different origin.
    */
-  WEB_ORIGINS: z
-    .string()
-    .default("http://localhost:3001,http://localhost:5173")
-    .transform((value) => value.split(",").map((origin) => origin.trim()).filter(Boolean)),
+  // A blank value means "not configured", not "allow nothing" — otherwise a
+  // `WEB_ORIGINS=` line left in .env silently blocks every browser request.
+  WEB_ORIGINS: blankAsMissing(
+    z.string().default("http://localhost:3001,http://localhost:5173"),
+  ).transform((value) =>
+    String(value)
+      .split(",")
+      .map((origin) => origin.trim())
+      .filter(Boolean),
+  ),
   LOG_LEVEL: z.enum(["fatal", "error", "warn", "info", "debug", "trace"]).default("info"),
   // Required from Phase 1 onward (Telegram login); optional while only /health exists.
   TELEGRAM_API_ID: optionalPositiveInt,
