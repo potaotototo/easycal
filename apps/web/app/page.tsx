@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { demoEvents } from './lib/demo-events';
 import {
@@ -24,6 +25,7 @@ import {
   type UserPreferencesView,
 } from './lib/preferences';
 import { NotAuthenticatedError } from './lib/session';
+import { fetchFolders } from './lib/folders-api.ts';
 
 const weekdayLabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
@@ -198,6 +200,22 @@ export default function Home() {
     const timeout = window.setTimeout(() => void loadEvents(), 0);
     return () => window.clearTimeout(timeout);
   }, [loadEvents]);
+
+  // Without a folder there is nothing to sync, so an empty calendar would be
+  // misleading. Send the user to pick one instead.
+  useEffect(() => {
+    if (isDemoMode) return;
+    const timeout = window.setTimeout(() => {
+      void fetchFolders()
+        .then((response) => {
+          if (!response.selected) window.location.assign('/setup');
+        })
+        .catch(() => {
+          // Folder state is a nicety; never block the calendar on it.
+        });
+    }, 0);
+    return () => window.clearTimeout(timeout);
+  }, []);
 
   useEffect(() => {
     if (isDemoMode) return;
@@ -548,6 +566,13 @@ export default function Home() {
             <span aria-hidden="true">☷</span>
             Preferences
           </button>
+          <Link
+            className="export-button"
+            href="/setup"
+            title="Choose which Telegram folder EasyCal reads"
+          >
+            Folder
+          </Link>
           <a
             className={`export-button ${isDemoMode ? 'is-disabled' : ''}`}
             href={isDemoMode ? undefined : icsDownloadUrl(range.from, range.to)}
